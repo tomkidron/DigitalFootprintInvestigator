@@ -109,9 +109,17 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
     )
     
     # Task 4: Final Report Generation
+    current_date = datetime.now().strftime("%B %d, %Y")
+    
     report_task = Task(
         description=f"""
         Create a comprehensive OSINT investigation report on: {target}
+        
+        IMPORTANT METADATA:
+        - Report Generation Date: {current_date}
+        - Data Collection Date: {current_date}
+        - Note: This report is based on publicly available information as of {current_date}
+        - LLM Knowledge Cutoff: The AI assistant's training data may not include events after its cutoff date
         
         Your objectives:
         1. Synthesize all findings into a clear, professional report
@@ -120,9 +128,12 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         4. Highlight key discoveries and patterns
         5. Provide executive summary
         6. Include methodology and tools used
+        7. CLEARLY STATE the report date as {current_date}
+        8. Include a disclaimer about data freshness and LLM knowledge limitations
         
         Report structure:
         - Executive Summary
+        - Report Metadata (Generation Date: {current_date}, Data Freshness, Limitations)
         - Target Overview
         - Digital Footprint Analysis
         - Platform-by-Platform Breakdown
@@ -131,19 +142,25 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         - Confidence Assessment
         - Sources and References
         - Recommendations
+        - Data Freshness Disclaimer
         
         Format: Markdown
         Include: sources, timestamps, and confidence scores
+        
+        CRITICAL: The report date MUST be {current_date}, not any other date.
+        Include a section explaining data freshness and potential limitations.
         """,
         agent=agents['report'],
         expected_output="""A professional OSINT report in markdown format with:
         - Clear executive summary
+        - Report metadata with current date and data freshness information
         - Organized findings by category
         - All sources cited with URLs
         - Confidence scores for each claim
         - Visual timeline if applicable
         - Actionable insights and patterns
-        - Professional formatting and structure""",
+        - Professional formatting and structure
+        - Data freshness disclaimer explaining when information was collected""",
         context=[google_search_task, social_media_task, analysis_task]
     )
     
