@@ -6,8 +6,8 @@ import os
 from crewai import Agent
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-from tools.search_tools import GoogleSearchTool, SocialMediaSearchTool
-from tools.analysis_tools import DataCorrelationTool, PatternExtractionTool
+from tools.search_tools import google_search, social_media_search
+from tools.analysis_tools import correlate_data, extract_patterns
 
 
 def get_llm():
@@ -48,9 +48,9 @@ def create_agents(config: dict) -> dict:
         backstory="""You are an expert OSINT researcher specializing in Google dorking 
         and advanced search techniques. You know how to find information that others miss 
         by using creative search queries and analyzing search results thoroughly.""",
-        tools=[GoogleSearchTool(config)],
+        tools=[google_search],
         llm=llm,
-        verbose=config['agents']['google_agent'].get('verbose', True),
+        verbose=True,
         allow_delegation=False
     )
     
@@ -61,9 +61,9 @@ def create_agents(config: dict) -> dict:
         backstory="""You are a social media intelligence specialist with deep knowledge 
         of how people use different platforms. You excel at finding profiles, connections, 
         and digital footprints across Twitter, LinkedIn, GitHub, Reddit, and other platforms.""",
-        tools=[SocialMediaSearchTool(config)],
+        tools=[social_media_search],
         llm=llm,
-        verbose=config['agents']['social_agent'].get('verbose', True),
+        verbose=True,
         allow_delegation=False
     )
     
@@ -75,12 +75,9 @@ def create_agents(config: dict) -> dict:
         patterns, correlating information from different sources, and determining the 
         confidence level of connections. You can spot when different profiles belong to 
         the same person based on subtle clues.""",
-        tools=[
-            DataCorrelationTool(config),
-            PatternExtractionTool(config)
-        ],
+        tools=[correlate_data, extract_patterns],
         llm=llm,
-        verbose=config['agents']['analysis_agent'].get('verbose', True),
+        verbose=True,
         allow_delegation=False
     )
     
@@ -94,7 +91,7 @@ def create_agents(config: dict) -> dict:
         information.""",
         tools=[],  # Report agent uses built-in capabilities
         llm=llm,
-        verbose=config['agents']['report_agent'].get('verbose', True),
+        verbose=True,
         allow_delegation=False
     )
     

@@ -1,0 +1,41 @@
+{
+    "name": "Digital Footprint Investigator",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "osint-tool",
+    "workspaceFolder": "/app",
+    // Override the default command to keep container running
+    "overrideCommand": true,
+    // Features to install in the container
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+    // VS Code extensions to install in the container
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "charliermarsh.ruff",
+                "redhat.vscode-yaml"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "/usr/local/bin/python",
+                "python.linting.enabled": true,
+                "python.linting.pylintEnabled": false,
+                "python.formatting.provider": "none",
+                "python.analysis.typeCheckingMode": "basic",
+                "editor.formatOnSave": true,
+                "files.autoSave": "afterDelay"
+            }
+        }
+    },
+    // Forward ports for any web interfaces (if you add them later)
+    "forwardPorts": [],
+    // Post-create command (runs after container is created)
+    "postCreateCommand": "pip list",
+    // Use 'postAttachCommand' to run commands after the container is running
+    "postAttachCommand": "echo '🚀 DevContainer ready! Set breakpoints and press F5 to debug.'",
+    // Comment out to connect as root instead
+    "remoteUser": "root"
+}

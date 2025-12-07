@@ -132,11 +132,11 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         - Sources and References
         - Recommendations
         
-        Format: {config['report']['format']}
-        Include: {'sources, ' if config['report']['include_sources'] else ''}{'timestamps, ' if config['report']['include_timestamps'] else ''}{'confidence scores' if config['report']['include_confidence_scores'] else ''}
+        Format: Markdown
+        Include: sources, timestamps, and confidence scores
         """,
         agent=agents['report'],
-        expected_output=f"""A professional OSINT report in {config['report']['format']} format with:
+        expected_output="""A professional OSINT report in markdown format with:
         - Clear executive summary
         - Organized findings by category
         - All sources cited with URLs

@@ -25,11 +25,76 @@ A multi-agent OSINT (Open Source Intelligence) tool built with CrewAI for invest
 
 ## 📋 Prerequisites
 
-- Python 3.9 or higher
-- API key for either OpenAI or Anthropic (Claude)
+- Python 3.11 or 3.12 (or use Docker)
+- API key for Anthropic Claude Sonnet 4.5 (recommended) or OpenAI
 - Optional: SerpAPI key for enhanced Google searches
 
 ## 🚀 Quick Start
+
+### Option 1: Docker (Recommended - Cross-Platform)
+
+**Prerequisites**: Docker Desktop installed
+
+1. **Build the container**:
+```bash
+docker-compose build
+```
+
+2. **Configure API keys**:
+```bash
+copy .env.example .env
+notepad .env
+```
+
+Add your API key to `.env`:
+```env
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+3. **Run investigation**:
+```bash
+docker-compose run --rm osint-tool "John Doe"
+```
+
+**Why Docker?**
+- ✅ Works identically on Windows, Mac, and Linux
+- ✅ No Python version conflicts
+- ✅ All dependencies pre-installed
+- ✅ Isolated from your system
+- ✅ Easy to share and deploy
+
+**How it works:**
+- `Dockerfile` defines the container image (Python 3.12 + all dependencies)
+- `docker-compose.yml` configures how to run the container
+- Your code is mounted as a volume (changes reflected instantly)
+- Reports and logs are saved to your local machine
+- `.env` file is loaded at runtime (secrets stay local)
+
+---
+
+### Option 2: Local Python Installation
+
+**Prerequisites**: Python 3.11 or 3.12
+
+---
+
+### Option 3: VS Code DevContainer (For Debugging)
+
+**Prerequisites**: Docker Desktop + VS Code with "Dev Containers" extension
+
+1. Open project in VS Code
+2. Press **F1** → "Dev Containers: Reopen in Container"
+3. Wait for container to build (~5 minutes first time)
+4. Set breakpoints in code
+5. Press **F5** to debug with full IDE support
+
+**Perfect for:**
+- Learning how the agents work
+- Debugging tool behavior
+- Developing new features
+- Understanding CrewAI internals
+
+---
 
 ### 1. Install Dependencies
 
@@ -51,7 +116,7 @@ Edit `.env` and add your API key:
 # For Anthropic (Claude) - Recommended
 ANTHROPIC_API_KEY=your_api_key_here
 LLM_PROVIDER=anthropic
-LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_MODEL=claude-sonnet-4-5
 
 # OR for OpenAI
 OPENAI_API_KEY=your_api_key_here
@@ -164,7 +229,7 @@ Environment variables for API keys and sensitive settings:
 # LLM Provider (required)
 ANTHROPIC_API_KEY=sk-ant-...
 LLM_PROVIDER=anthropic
-LLM_MODEL=claude-3-5-sonnet-20241022
+LLM_MODEL=claude-sonnet-4-5
 
 # Optional APIs
 SERPAPI_KEY=...             # Better Google results

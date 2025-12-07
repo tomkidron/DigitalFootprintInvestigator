@@ -7,6 +7,7 @@ A multi-agent OSINT tool using CrewAI for orchestration
 import os
 import sys
 import yaml
+import argparse
 from pathlib import Path
 from dotenv import load_dotenv
 from datetime import datetime
@@ -106,24 +107,55 @@ def run_investigation(target: str, config_path: str = "config.yaml"):
 
 def main():
     """Main entry point"""
+    parser = argparse.ArgumentParser(
+        description='Digital Footprint Investigator - Multi-Agent OSINT Tool',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py "John Doe"
+  python main.py --target "jane@example.com"
+  python main.py --config custom_config.yaml "username123"
+        """
+    )
+    
+    parser.add_argument(
+        'target',
+        nargs='?',
+        help='Search target (name, email, username, etc.)'
+    )
+    parser.add_argument(
+        '--target', '-t',
+        dest='target_flag',
+        help='Search target (alternative to positional argument)'
+    )
+    parser.add_argument(
+        '--config', '-c',
+        default='config.yaml',
+        help='Path to configuration file (default: config.yaml)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Get target from either positional arg or flag
+    target = args.target or args.target_flag
+    
     print("=" * 60)
     print("Digital Footprint Investigator")
     print("Multi-Agent OSINT Tool")
     print("=" * 60)
     print()
     
-    # Get target from command line or prompt
-    if len(sys.argv) > 1:
-        target = " ".join(sys.argv[1:])
-    else:
+    # If no target provided, prompt for it
+    if not target:
         target = input("Enter search target (name, email, username, etc.): ").strip()
     
     if not target:
         print("Error: No target provided")
+        parser.print_help()
         sys.exit(1)
     
     # Run investigation
-    report_path = run_investigation(target)
+    report_path = run_investigation(target, args.config)
     
     if report_path:
         print(f"\n✅ Investigation complete!")

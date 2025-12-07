@@ -1,3 +1,8 @@
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
 # Python
 __pycache__/
 *.py[cod]
@@ -25,12 +30,9 @@ wheels/
 
 # Environment
 .env
-.venv
 
 # IDE
-.vscode/*
-!.vscode/launch.json
-!.vscode/settings.json
+.vscode/
 .idea/
 *.swp
 *.swo
@@ -53,8 +55,9 @@ Thumbs.db
 .cache/
 *.cache
 
-# Jupyter
-.ipynb_checkpoints/
+# Git
+.git/
+.gitignore
 
 # Testing
 .pytest_cache/
