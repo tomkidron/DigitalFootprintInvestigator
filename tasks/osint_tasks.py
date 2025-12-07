@@ -118,6 +118,9 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         IMPORTANT METADATA:
         - Report Generation Date: {current_date}
         - Data Collection Date: {current_date}
+        - Investigation Status: Assess whether ongoing monitoring is recommended or investigation is complete
+        - Data Quality: Rate the overall quality and completeness of gathered data (High/Medium/Low)
+        - Primary Intelligence Value: Identify the most valuable source or platform for this target
         - Note: This report is based on publicly available information as of {current_date}
         - LLM Knowledge Cutoff: The AI assistant's training data may not include events after its cutoff date
         
@@ -130,10 +133,12 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         6. Include methodology and tools used
         7. CLEARLY STATE the report date as {current_date}
         8. Include a disclaimer about data freshness and LLM knowledge limitations
+        9. Assess investigation status (ongoing monitoring vs. complete)
+        10. Rate data quality and identify most valuable intelligence sources
         
         Report structure:
         - Executive Summary
-        - Report Metadata (Generation Date: {current_date}, Data Freshness, Limitations)
+        - Report Metadata (Generation Date: {current_date}, Investigation Status, Data Quality, Primary Intelligence Value)
         - Target Overview
         - Digital Footprint Analysis
         - Platform-by-Platform Breakdown
