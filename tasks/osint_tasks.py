@@ -145,6 +145,14 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         - Avoid jargon like "established patterns" without supporting data
         - Use percentages, counts, dates, and specific examples
         
+        CONFIDENCE SCORE FORMATTING:
+        - Show confidence scores ONCE per section in the header, not after every sentence
+        - Format: "## Section Name (Confidence: 95%)" or "### Subsection (Confidence: 90%)"
+        - Example: "### Biographical Data (Confidence: 100%)" then list all biographical facts
+        - Example: "### Twitter/X Profile (Confidence: 95%)" then describe the profile
+        - Only repeat confidence if it changes significantly within a section
+        - This keeps reports clean and professional
+        
         Report structure:
         - Executive Summary (specific findings, not generalizations)
         - Report Metadata (Generation Date: {current_date}, Investigation Status, Data Quality, Primary Intelligence Value)
