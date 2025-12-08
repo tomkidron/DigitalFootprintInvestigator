@@ -136,8 +136,17 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         9. Assess investigation status (ongoing monitoring vs. complete)
         10. Rate data quality and identify most valuable intelligence sources
         
+        CRITICAL REPORTING STANDARDS:
+        - Use SPECIFIC, MEASURABLE data instead of vague statements
+        - Instead of "high posting frequency" → "5-50 posts per day (observed over 100+ days)"
+        - Instead of "established behavioral patterns" → List specific patterns with examples
+        - Instead of "significant online presence" → "170M followers on Twitter/X, 106K Reddit karma"
+        - Every claim must be verifiable and quantified where possible
+        - Avoid jargon like "established patterns" without supporting data
+        - Use percentages, counts, dates, and specific examples
+        
         Report structure:
-        - Executive Summary
+        - Executive Summary (specific findings, not generalizations)
         - Report Metadata (Generation Date: {current_date}, Investigation Status, Data Quality, Primary Intelligence Value)
         - Target Overview
         - Digital Footprint Analysis
