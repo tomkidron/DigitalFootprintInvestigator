@@ -28,6 +28,9 @@ def google_search(query: str) -> str:
     logger.info(f"Google Search initiated for query: {query}")
 
     try:
+        # Add delay to avoid rate-limiting (important for free tier)
+        sleep(2)
+        
         # Check if SerpAPI key is available
         serpapi_key = os.getenv("SERPAPI_KEY")
 
