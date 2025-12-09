@@ -4,8 +4,12 @@ Search tools for OSINT investigation
 
 import os
 import re
+import logging
 import requests
 from crewai.tools import tool
+from time import sleep
+
+logger = logging.getLogger("osint_tool")
 
 
 @tool("Google Search")
@@ -21,16 +25,24 @@ def google_search(query: str) -> str:
     Returns:
         Search results with URLs and extracted identifiers
     """
+    logger.info(f"Google Search initiated for query: {query}")
+    
     try:
         # Check if SerpAPI key is available
         serpapi_key = os.getenv("SERPAPI_KEY")
         
-        if serpapi_key:
+        if serpapi_key and serpapi_key.strip():
+            logger.debug("Using SerpAPI for Google search")
             return _search_with_serpapi(query, serpapi_key)
         else:
-            return _search_with_googlesearch(query)
+            logger.warning("SERPAPI_KEY not configured. Using fallback googlesearch library (limited reliability). Recommend setting SERPAPI_KEY in .env")
+            result = _search_with_googlesearch(query)
+            if "error" in result.lower() or "not found" in result.lower():
+                logger.warning(f"Fallback search returned limited results for query: {query}")
+            return result
             
     except Exception as e:
+        logger.error(f"Google search error: {str(e)}", exc_info=True)
         return f"Search error: {str(e)}"
 
 
@@ -85,20 +97,44 @@ def _search_with_googlesearch(query: str) -> str:
         from googlesearch import search
         
         results = []
-        for url in search(query, num_results=20, sleep_interval=2):
-            results.append(url)
+        try:
+            for url in search(query, num_results=20, sleep_interval=2, timeout=10):
+                results.append(url)
+        except Exception as e:
+            logger.warning(f"Googlesearch library error (may be rate limited): {str(e)}")
+            # Return graceful error message
+            return f"\n⚠️ WARNING: Search results may be incomplete\n\nGoogle Search Results for: {query}\n" \
+                   f"Search Status: Limited/Rate-limited (free library with no API key)\n\n" \
+                   f"Status: {len(results)} results collected before timeout\n\n" \
+                   f"RECOMMENDATION: Add SERPAPI_KEY to .env for reliable Google searches\n" \
+                   f"This will provide accurate result counts and snippets.\n\n" \
+                   f"Current Results:\n"
         
-        output = f"Google Search Results for: {query}\n\n"
-        output += f"Found {len(results)} results:\n\n"
+        if not results:
+            output = f"\n⚠️ WARNING: No results returned (possible rate limiting)\n\n"
+            output += f"Google Search Results for: {query}\n"
+            output += f"Search Status: UNRELIABLE (using free googlesearch library without API key)\n\n"
+            output += f"The free googlesearch library may be rate-limited or blocked.\n"
+            output += f"RECOMMENDATION: Add SERPAPI_KEY to .env for accurate searches\n"
+            return output
+        
+        output = f"Google Search Results for: {query}\n"
+        output += f"Found {len(results)} results (using free search library):\n\n"
         
         for i, url in enumerate(results, 1):
             output += f"{i}. {url}\n"
         
-        output += "\nNote: Using free search. For better results with snippets, add SERPAPI_KEY to .env\n"
+        output += "\n⚠️ Note: Using free search without API key. Results may be incomplete due to rate-limiting.\n"
+        output += "For reliable results with snippets, add SERPAPI_KEY to .env\n"
         
         return output
         
+    except ImportError:
+        logger.error("googlesearch library not installed")
+        return "googlesearch library not installed. Install with: pip install google-search-results\n" \
+               "Or add SERPAPI_KEY to .env for more reliable searches."
     except Exception as e:
+        logger.error(f"Fallback search error: {str(e)}")
         return f"Google search error: {str(e)}\nTip: Add SERPAPI_KEY to .env for more reliable searches"
 
 
