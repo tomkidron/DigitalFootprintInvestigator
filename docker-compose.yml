@@ -2,20 +2,19 @@ services:
   osint-tool:
     build: .
     container_name: digital-footprint-investigator
-    
+
     # Mount current directory for live code updates
     volumes:
       - .:/app
       - ./reports:/app/reports
       - ./logs:/app/logs
-    
+
     # Load environment variables from .env file
     env_file:
       - .env
-    
+
     # Keep container running for interactive use
     stdin_open: true
     tty: true
-    
     # Override default command for interactive shell
     # command: /bin/bash

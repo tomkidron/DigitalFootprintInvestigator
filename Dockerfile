@@ -18,7 +18,7 @@ COPY requirements.txt .
 # This reduces final image size and keeps useful pip caching behavior.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       build-essential gcc libssl-dev libffi-dev \
+    build-essential gcc libssl-dev libffi-dev \
     && pip install --no-cache-dir -r requirements.txt \
     && apt-get purge -y --auto-remove build-essential gcc \
     && rm -rf /var/lib/apt/lists/*
