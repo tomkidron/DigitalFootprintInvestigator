@@ -6,13 +6,17 @@ import os
 import re
 import logging
 import requests
-from crewai.tools import tool
 from time import sleep
+from pathlib import Path
 
 logger = logging.getLogger("osint_tool")
 
 
-@tool("Google Search")
+def write_checkpoint(name, query, output, out_dir, fmt):
+    """Stub for checkpoint writing"""
+    pass
+
+
 def google_search(query: str) -> str:
     """
     Performs Google searches and extracts relevant information.
@@ -30,7 +34,7 @@ def google_search(query: str) -> str:
     try:
         # Add delay to avoid rate-limiting (important for free tier)
         sleep(2)
-        
+
         # Check if SerpAPI key is available
         serpapi_key = os.getenv("SERPAPI_KEY")
 
@@ -62,11 +66,13 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
 
         logger.debug(f"SerpAPI request: {query}")
         search = GoogleSearch(params)
-        
+
         try:
             results = search.get_dict()
         except Exception as timeout_err:
-            logger.warning(f"SerpAPI timeout/rate limit on query: {query}. Error: {str(timeout_err)}")
+            logger.warning(
+                f"SerpAPI timeout/rate limit on query: {query}. Error: {str(timeout_err)}"
+            )
             return f"⚠️ SerpAPI Rate Limit or Timeout\n\nQuery: {query}\n\nNote: SerpAPI may have rate-limited this request. Try again in a moment.\n"
 
         # Extract organic results
@@ -95,6 +101,13 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
             output += identifiers
 
         logger.info(f"SerpAPI returned {len(findings)} results for: {query}")
+        # write checkpoint for google search
+        try:
+            write_checkpoint(
+                "google", query, output, out_dir=Path("reports/checkpoints"), fmt="txt"
+            )
+        except Exception:
+            logger.debug("Failed to write google checkpoint")
         return output
 
     except ImportError:
@@ -134,6 +147,16 @@ def _search_with_googlesearch(query: str) -> str:
             output += f"Search Status: UNRELIABLE (using free googlesearch library without API key)\n\n"
             output += f"The free googlesearch library may be rate-limited or blocked.\n"
             output += f"RECOMMENDATION: Add SERPAPI_KEY to .env for accurate searches\n"
+            try:
+                write_checkpoint(
+                    "google",
+                    query,
+                    output,
+                    out_dir=Path("reports/checkpoints"),
+                    fmt="txt",
+                )
+            except Exception:
+                logger.debug("Failed to write google checkpoint")
             return output
 
         output = f"Google Search Results for: {query}\n"
@@ -144,6 +167,13 @@ def _search_with_googlesearch(query: str) -> str:
 
         output += "\n⚠️ Note: Using free search without API key. Results may be incomplete due to rate-limiting.\n"
         output += "For reliable results with snippets, add SERPAPI_KEY to .env\n"
+
+        try:
+            write_checkpoint(
+                "google", query, output, out_dir=Path("reports/checkpoints"), fmt="txt"
+            )
+        except Exception:
+            logger.debug("Failed to write google checkpoint")
 
         return output
 
@@ -180,7 +210,6 @@ def _extract_identifiers(text: str) -> str:
     return "\n".join(identifiers) if identifiers else ""
 
 
-@tool("Social Media Search")
 def social_media_search(target: str) -> str:
     """
     Searches across multiple social media platforms for profiles and activity.
@@ -202,7 +231,14 @@ def social_media_search(target: str) -> str:
         platform_result = _search_platform(platform, target)
         results.append(platform_result)
 
-    return "\n".join(results)
+    full = "\n".join(results)
+    try:
+        write_checkpoint(
+            "social", target, full, out_dir=Path("reports/checkpoints"), fmt="txt"
+        )
+    except Exception:
+        logger.debug("Failed to write social checkpoint")
+    return full
 
 
 def _search_platform(platform: str, target: str) -> str:

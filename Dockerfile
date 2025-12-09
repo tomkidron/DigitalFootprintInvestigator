@@ -10,18 +10,11 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install system dependencies (if needed for web scraping)
 # Copy requirements first (for better caching)
 COPY requirements.txt .
 
-# Install build dependencies, install Python deps, then remove build deps
-# This reduces final image size and keeps useful pip caching behavior.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    build-essential gcc libssl-dev libffi-dev \
-    && pip install --no-cache-dir -r requirements.txt \
-    && apt-get purge -y --auto-remove build-essential gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
@@ -35,7 +28,4 @@ RUN mkdir -p reports logs \
 USER appuser
 
 # Set default command
-ENTRYPOINT ["python", "main.py"]
-
-# Default argument (can be overridden)
-CMD ["--help"]
+CMD ["python", "main.py"]

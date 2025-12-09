@@ -1,14 +1,14 @@
 # Digital Footprint Investigator
 
-A multi-agent OSINT (Open Source Intelligence) tool built with CrewAI for investigating digital footprints across the web.
+A multi-agent OSINT (Open Source Intelligence) tool built with LangGraph for investigating digital footprints across the web.
 
 ## 🎯 Features
 
-- **Multi-Agent Architecture**: Specialized agents working together
-  - Google Search Agent: Initial reconnaissance
-  - Social Media Agent: Platform-specific searches
-  - Analysis Agent: Data correlation and pattern extraction
-  - Report Agent: Professional intelligence reports
+- **LangGraph Workflow**: Parallel execution with state management
+  - Google Search: Initial reconnaissance (runs in parallel)
+  - Social Media Search: Platform-specific searches (runs in parallel)
+  - Analysis: Data correlation and pattern extraction
+  - Report Generation: Professional intelligence reports
 
 - **Platform Coverage**:
   - Google Search (with SerpAPI support)
@@ -19,9 +19,10 @@ A multi-agent OSINT (Open Source Intelligence) tool built with CrewAI for invest
   - Instagram (limited)
   - Facebook (limited)
 
-- **Configurable**: YAML-based configuration for easy customization
-- **Extensible**: Modular design for adding new platforms and tools
-- **Privacy-Aware**: Optional sensitive data redaction
+- **Parallel Execution**: Google and social media searches run simultaneously
+- **Checkpointing**: Built-in state management for resumable workflows
+- **Extensible**: Modular design for adding new platforms and nodes
+- **Privacy-Aware**: Uses publicly available information only
 
 ## 📋 Prerequisites
 
@@ -53,7 +54,7 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 
 3. **Run investigation**:
 ```bash
-docker-compose run --rm osint-tool "John Doe"
+docker-compose run --rm osint-tool python main.py "John Doe"
 ```
 
 **Why Docker?**
@@ -147,26 +148,20 @@ platforms:
 python main.py "John Doe"
 ```
 
-Or run interactively:
-
-```bash
-python main.py
-```
-
 ## 📁 Project Structure
 
 ```
-AgentOrchestration/
-├── agents/
-│   ├── __init__.py
-│   └── orchestrator.py       # Agent definitions
-├── tasks/
-│   ├── __init__.py
-│   └── osint_tasks.py        # Task workflow
+DigitalFootprintInvestigator/
+├── graph/
+│   ├── nodes/
+│   │   ├── search.py         # Search nodes (Google, Social)
+│   │   ├── analysis.py       # Analysis node
+│   │   └── report.py         # Report generation node
+│   ├── state.py              # LangGraph state definition
+│   └── workflow.py           # Workflow orchestration
 ├── tools/
 │   ├── __init__.py
-│   ├── search_tools.py       # Google & social media search
-│   └── analysis_tools.py     # Data correlation & patterns
+│   └── search_tools.py       # Google & social media search functions
 ├── utils/
 │   ├── __init__.py
 │   ├── logger.py             # Logging configuration
@@ -174,7 +169,6 @@ AgentOrchestration/
 ├── reports/                  # Generated reports (created automatically)
 ├── logs/                     # Log files (created automatically)
 ├── main.py                   # Entry point
-├── config.yaml               # Main configuration
 ├── .env                      # API keys (create from .env.example)
 ├── .env.example              # Environment template
 └── requirements.txt          # Python dependencies
@@ -385,7 +379,7 @@ This is a learning project! Feel free to:
 
 ## 📚 Learn More
 
-- [CrewAI Documentation](https://docs.crewai.com/)
+- [LangGraph Documentation](https://langchain-ai.github.io/langgraph/)
 - [OSINT Framework](https://osintframework.com/)
 - [Anthropic Claude](https://www.anthropic.com/)
 - [OpenAI API](https://platform.openai.com/)
