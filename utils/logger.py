@@ -1,11 +1,50 @@
 """
-Logging configuration
+Logging configuration with progress tracking
 """
 
 import logging
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
+
+
+class ProgressTracker:
+    """Track investigation progress with formatted output"""
+    
+    def __init__(self, logger: logging.Logger):
+        self.logger = logger
+        self.stages = []
+        self.current_stage = 0
+    
+    def set_stages(self, stages: list):
+        """Set the investigation stages"""
+        self.stages = stages
+        self.current_stage = 0
+        self.logger.info(f"Investigation plan: {len(stages)} stages")
+    
+    def start_stage(self, stage_name: str):
+        """Mark the start of a stage"""
+        self.current_stage += 1
+        total = len(self.stages)
+        progress = f"[{self.current_stage}/{total}]"
+        self.logger.info(f"{progress} Starting: {stage_name}")
+        print(f"\n{'='*60}")
+        print(f"Stage {self.current_stage}/{total}: {stage_name}")
+        print(f"{'='*60}")
+    
+    def complete_stage(self, stage_name: str, details: str = ""):
+        """Mark the completion of a stage"""
+        msg = f"✓ Completed: {stage_name}"
+        if details:
+            msg += f" ({details})"
+        self.logger.info(msg)
+        print(f"✓ {stage_name}")
+    
+    def log_finding(self, category: str, finding: str):
+        """Log a specific finding"""
+        self.logger.info(f"[FINDING] {category}: {finding}")
+        print(f"  • {category}: {finding}")
 
 
 def setup_logger(name: str = "osint_tool", log_dir: str = "logs") -> logging.Logger:
@@ -53,7 +92,7 @@ def setup_logger(name: str = "osint_tool", log_dir: str = "logs") -> logging.Log
     file_handler.setFormatter(detailed_formatter)
     
     # Console handler (simple logs)
-    console_handler = logging.StreamHandler()
+    console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(simple_formatter)
     

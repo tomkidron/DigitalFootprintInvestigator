@@ -2,7 +2,12 @@
 Task definitions for the OSINT investigation workflow
 """
 
+import logging
+from datetime import datetime
 from crewai import Task
+
+# Setup logger for tasks
+logger = logging.getLogger("osint_tool")
 
 
 def create_tasks(agents: dict, target: str, config: dict) -> list:
@@ -17,6 +22,8 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
     Returns:
         List of Task instances
     """
+    logger.debug(f"Creating tasks for target: {target}")
+    logger.debug(f"Available agents: {list(agents.keys())}")
     
     # Task 1: Google Search
     google_search_task = Task(
@@ -47,6 +54,7 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         - Key facts and timeline information
         - Confidence assessment for each finding"""
     )
+    logger.debug("Google Search task created")
     
     # Task 2: Social Media Search
     social_media_task = Task(
@@ -186,9 +194,12 @@ def create_tasks(agents: dict, target: str, config: dict) -> list:
         context=[google_search_task, social_media_task, analysis_task]
     )
     
-    return [
+    tasks = [
         google_search_task,
         social_media_task,
         analysis_task,
         report_task
     ]
+    
+    logger.info(f"Successfully created {len(tasks)} tasks for investigation")
+    return tasks

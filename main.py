@@ -15,7 +15,7 @@ from datetime import datetime
 from crewai import Crew
 from agents.orchestrator import create_agents
 from tasks.osint_tasks import create_tasks
-from utils.logger import setup_logger
+from utils.logger import setup_logger, ProgressTracker
 from utils.config import load_config
 
 # Load environment variables
@@ -53,42 +53,66 @@ def run_investigation(target: str, config_path: str = "config.yaml"):
         config_path: Path to configuration file
     """
     logger.info(f"Starting investigation for target: {target}")
+    progress = ProgressTracker(logger)
     
-    # Validate environment
+    # Define investigation stages
+    stages = [
+        "Environment Validation",
+        "Configuration Loading",
+        "Agent Initialization",
+        "Task Creation",
+        "Crew Assembly",
+        "Investigation Execution",
+        "Report Generation"
+    ]
+    progress.set_stages(stages)
+    
+    # Stage 1: Validate environment
+    progress.start_stage("Environment Validation")
     if not validate_environment():
         logger.error("Environment validation failed. Check your .env file")
         return None
+    progress.complete_stage("Environment Validation")
     
-    # Load configuration
+    # Stage 2: Load configuration
+    progress.start_stage("Configuration Loading")
     config = load_config(config_path)
     logger.info("Configuration loaded successfully")
-    
-    # Create output directory if it doesn't exist
     output_dir = Path(config['report']['output_dir'])
     output_dir.mkdir(parents=True, exist_ok=True)
+    progress.complete_stage("Configuration Loading", f"Output dir: {output_dir}")
     
-    # Create agents
-    logger.info("Initializing agents...")
+    # Stage 3: Create agents
+    progress.start_stage("Agent Initialization")
     agents = create_agents(config)
+    agent_names = list(agents.keys())
+    logger.info(f"Created {len(agents)} agents: {', '.join(agent_names)}")
+    progress.complete_stage("Agent Initialization", f"{len(agents)} agents")
     
-    # Create tasks
-    logger.info("Creating tasks...")
+    # Stage 4: Create tasks
+    progress.start_stage("Task Creation")
     tasks = create_tasks(agents, target, config)
+    logger.info(f"Created {len(tasks)} tasks")
+    progress.complete_stage("Task Creation", f"{len(tasks)} tasks")
     
-    # Create crew
-    logger.info("Assembling crew...")
+    # Stage 5: Assemble crew
+    progress.start_stage("Crew Assembly")
     crew = Crew(
         agents=list(agents.values()),
         tasks=tasks,
         verbose=config['agents']['orchestrator']['verbose']
     )
+    progress.complete_stage("Crew Assembly")
     
-    # Run investigation
-    logger.info("Starting investigation workflow...")
+    # Stage 6: Run investigation
+    progress.start_stage("Investigation Execution")
     try:
+        logger.info(f"Executing investigation workflow for target: {target}")
         result = crew.kickoff()
+        progress.complete_stage("Investigation Execution", "Workflow completed")
         
-        # Save report
+        # Stage 7: Generate report
+        progress.start_stage("Report Generation")
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_target = "".join(c for c in target if c.isalnum() or c in (' ', '-', '_')).strip()
         report_filename = f"{safe_target}_{timestamp}.{config['report']['format']}"
@@ -97,11 +121,13 @@ def run_investigation(target: str, config_path: str = "config.yaml"):
         with open(report_path, 'w', encoding='utf-8') as f:
             f.write(str(result))
         
+        progress.complete_stage("Report Generation", f"Saved to {report_path}")
         logger.info(f"Investigation complete! Report saved to: {report_path}")
         return report_path
         
     except Exception as e:
         logger.error(f"Investigation failed: {str(e)}", exc_info=True)
+        progress.logger.error(f"Investigation failed at stage: Investigation Execution")
         return None
 
 
