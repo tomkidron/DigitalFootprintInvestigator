@@ -225,8 +225,8 @@ def social_media_search(target: str) -> str:
     results.append(f"Social Media Search for: {target}\n")
     results.append("=" * 60 + "\n")
 
-    # Search each platform
-    platforms = ["linkedin", "twitter", "github", "reddit"]
+    # Search each platform (only implemented ones)
+    platforms = ["linkedin", "twitter", "github", "reddit", "instagram", "facebook", "youtube", "soundcloud"]
     for platform in platforms:
         platform_result = _search_platform(platform, target)
         results.append(platform_result)
@@ -254,8 +254,12 @@ def _search_platform(platform: str, target: str) -> str:
         output += _search_github(target)
     elif platform == "reddit":
         output += _search_reddit(target)
+    elif platform in ["instagram", "facebook", "youtube", "soundcloud"]:
+        output += f"❌ {platform.upper()}: Not implemented\n"
+        output += f"Manual search required: Search '{target}' on {platform}.com\n"
+        output += f"Note: {platform.title()} API requires special access/approval\n"
     else:
-        output += f"Platform {platform} not yet implemented\n"
+        output += f"❌ Platform {platform} not yet implemented\n"
 
     return output
 
@@ -264,73 +268,144 @@ def _search_linkedin(target: str) -> str:
     """Search LinkedIn (via Google dorking)"""
     query = f'site:linkedin.com/in "{target}"'
     return (
-        f"LinkedIn profiles (via Google):\nSearch: {query}\n"
-        f"Tip: Manually search Google for: {query}\n"
+        f"⚠️ LinkedIn: Google dorking only (no direct API)\n"
+        f"Search query: {query}\n"
+        f"Manual verification required\n"
+        f"Note: LinkedIn API requires special partnership\n"
     )
 
 
 def _search_twitter(target: str) -> str:
     """Search Twitter/X"""
     return (
-        f"Twitter/X search strategies:\n"
+        f"❌ Twitter/X: Not implemented (search strategies only)\n"
+        f"Manual search recommendations:\n"
         f"1. Search: @{target.replace(' ', '')}\n"
         f'2. Search: "{target}" on twitter.com\n'
         f'3. Google: site:twitter.com "{target}"\n'
-        f"Tip: Add TWITTER_BEARER_TOKEN to .env for API access\n"
+        f"Note: Add TWITTER_BEARER_TOKEN to .env for API access\n"
     )
 
 
 def _search_github(target: str) -> str:
-    """Search GitHub"""
+    """Search GitHub with repository analysis"""
     try:
         username = target.replace(" ", "").lower()
-        url = f"https://api.github.com/users/{username}"
-
-        headers = {}
+        headers = {"User-Agent": "OSINT Tool 1.0"}
         github_token = os.getenv("GITHUB_TOKEN")
         if github_token:
             headers["Authorization"] = f"token {github_token}"
 
-        response = requests.get(url, headers=headers, timeout=10)
+        # Get profile info
+        profile_url = f"https://api.github.com/users/{username}"
+        response = requests.get(profile_url, headers=headers, timeout=10)
 
-        if response.status_code == 200:
-            data = response.json()
-            output = f"✓ Found GitHub profile:\n"
-            output += f"  Username: {data.get('login')}\n"
-            output += f"  Name: {data.get('name', 'N/A')}\n"
-            output += f"  Bio: {data.get('bio', 'N/A')}\n"
-            output += f"  Location: {data.get('location', 'N/A')}\n"
-            output += f"  Public Repos: {data.get('public_repos', 0)}\n"
-            output += f"  Followers: {data.get('followers', 0)}\n"
-            output += f"  Profile: {data.get('html_url')}\n"
-            return output
-        else:
+        if response.status_code != 200:
             return f"No GitHub profile found for: {username}\n"
-
+            
+        data = response.json()
+        output = f"✓ Found GitHub profile:\n"
+        output += f"  Username: {data.get('login')}\n"
+        output += f"  Name: {data.get('name', 'N/A')}\n"
+        output += f"  Bio: {data.get('bio', 'N/A')}\n"
+        output += f"  Location: {data.get('location', 'N/A')}\n"
+        output += f"  Public Repos: {data.get('public_repos', 0)}\n"
+        output += f"  Followers: {data.get('followers', 0)}\n"
+        
+        # Analyze repositories if any exist
+        if data.get('public_repos', 0) > 0:
+            repos_url = f"https://api.github.com/users/{username}/repos?sort=updated&per_page=10"
+            try:
+                repos_response = requests.get(repos_url, headers=headers, timeout=10)
+                if repos_response.status_code == 200:
+                    repos = repos_response.json()
+                    
+                    if repos:
+                        languages = set()
+                        recent_repos = []
+                        
+                        for repo in repos[:5]:  # Analyze top 5 repos
+                            repo_name = repo.get('name')
+                            description = repo.get('description', 'No description')
+                            language = repo.get('language')
+                            stars = repo.get('stargazers_count', 0)
+                            updated = repo.get('updated_at', '')[:10]  # Date only
+                            
+                            if language:
+                                languages.add(language)
+                            
+                            recent_repos.append(f"{repo_name}: {description[:50]}... ({language}, ★{stars}, {updated})")
+                        
+                        output += f"  Languages: {', '.join(list(languages)[:5])}\n"
+                        output += f"  Recent Repositories:\n"
+                        for repo_info in recent_repos:
+                            output += f"    - {repo_info}\n"
+            except Exception:
+                output += "  Repository analysis: Limited access\n"
+        
+        output += f"  Profile: {data.get('html_url')}\n"
+        return output
+        
     except Exception as e:
         return f"GitHub search error: {str(e)}\n"
 
 
 def _search_reddit(target: str) -> str:
-    """Search Reddit"""
+    """Search Reddit with deep analysis"""
     try:
         username = target.replace(" ", "").lower()
-        url = f"https://www.reddit.com/user/{username}/about.json"
-
         headers = {"User-Agent": "OSINT Tool 1.0"}
-        response = requests.get(url, headers=headers, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-            user_data = data.get("data", {})
-            output = f"✓ Found Reddit profile:\n"
-            output += f"  Username: {user_data.get('name')}\n"
-            output += f"  Karma: {user_data.get('total_karma', 0)}\n"
-            output += f"  Created: {user_data.get('created_utc', 'N/A')}\n"
-            output += f"  Profile: https://reddit.com/user/{username}\n"
-            return output
-        else:
+        
+        # Get profile info
+        profile_url = f"https://www.reddit.com/user/{username}/about.json"
+        response = requests.get(profile_url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
             return f"No Reddit profile found for: {username}\n"
-
+            
+        data = response.json()
+        user_data = data.get("data", {})
+        
+        output = f"✓ Found Reddit profile:\n"
+        output += f"  Username: {user_data.get('name')}\n"
+        output += f"  Karma: {user_data.get('total_karma', 0)}\n"
+        output += f"  Created: {user_data.get('created_utc', 'N/A')}\n"
+        
+        # Get recent comments for activity analysis
+        comments_url = f"https://www.reddit.com/user/{username}/comments.json?limit=25"
+        try:
+            comments_response = requests.get(comments_url, headers=headers, timeout=10)
+            if comments_response.status_code == 200:
+                comments_data = comments_response.json()
+                comments = comments_data.get("data", {}).get("children", [])
+                
+                if comments:
+                    subreddits = set()
+                    recent_activity = []
+                    
+                    for comment in comments[:10]:  # Analyze last 10 comments
+                        comment_data = comment.get("data", {})
+                        subreddit = comment_data.get("subreddit")
+                        body = comment_data.get("body", "")[:100]  # First 100 chars
+                        score = comment_data.get("score", 0)
+                        
+                        if subreddit:
+                            subreddits.add(subreddit)
+                        if body and body != "[deleted]":
+                            recent_activity.append(f"r/{subreddit}: {body}... (score: {score})")
+                    
+                    output += f"  Active Subreddits: {', '.join(list(subreddits)[:5])}\n"
+                    output += f"  Recent Comments: {len(recent_activity)}\n"
+                    
+                    if recent_activity:
+                        output += "  Sample Activity:\n"
+                        for activity in recent_activity[:3]:
+                            output += f"    - {activity}\n"
+        except Exception:
+            output += "  Comment history: Access limited\n"
+        
+        output += f"  Profile: https://reddit.com/user/{username}\n"
+        return output
+        
     except Exception as e:
         return f"Reddit search error: {str(e)}\n"

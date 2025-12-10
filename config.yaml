@@ -1,0 +1,43 @@
+# OSINT Investigation Configuration
+
+# Advanced Analysis Features (default: disabled for speed/simplicity)
+advanced_analysis:
+  timeline_correlation: false    # Cross-platform timestamp analysis
+  network_analysis: false       # Connection mapping between platforms
+  deep_content_analysis: false  # Full post/comment content analysis
+
+# Search Configuration
+search:
+  max_results: 20
+  timeout: 30
+  parallel_execution: true
+
+# Platform Configuration
+platforms:
+  linkedin:
+    enabled: true
+    deep_search: false
+  twitter:
+    enabled: true
+    deep_search: false
+  github:
+    enabled: true
+    deep_search: false
+  reddit:
+    enabled: true
+    deep_search: false
+  instagram:
+    enabled: true
+  facebook:
+    enabled: true
+  youtube:
+    enabled: true
+  soundcloud:
+    enabled: true
+
+# Report Configuration
+report:
+  format: markdown
+  output_dir: ./reports
+  include_sources: true
+  include_metadata: true
