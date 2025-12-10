@@ -1,46 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Python virtual environments
+.venv/
 venv/
 env/
 ENV/
-*.egg-info/
 
-# Environment
-.env
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 
-# IDE
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# Logs and reports
-logs/
-reports/
-*.log
+# OS files
+.DS_Store
+Thumbs.db
 
 # Git
 .git/
 .gitignore
 
-# Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
+# Logs and reports (will be mounted as volumes)
+logs/
+reports/
 
-# DevContainer
-.devcontainer/
+# Documentation
+*.md
+!README.md
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Testing
+# Other
 .pytest_cache/
 .coverage
-htmlcov/
+.env.local
+.env.development
+.env.test
