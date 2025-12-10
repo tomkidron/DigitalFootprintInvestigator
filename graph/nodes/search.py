@@ -14,13 +14,28 @@ def google_node(state: OSINTState) -> dict:
     # Add analysis method metadata
     import os
     serpapi_key = os.getenv("SERPAPI_KEY")
+    hibp_key = os.getenv("HIBP_API_KEY")
+    hunter_key = os.getenv("HUNTER_API_KEY")
+    
+    result += "\n\n=== GOOGLE ANALYSIS METHOD ===\n"
     if serpapi_key and serpapi_key.strip():
-        result += "\n\n=== GOOGLE ANALYSIS METHOD ===\n"
         result += "✓ SerpAPI: Professional Google search with snippets\n"
     else:
-        result += "\n\n=== GOOGLE ANALYSIS METHOD ===\n"
         result += "⚠ Free googlesearch library: Limited reliability, no snippets\n"
         result += "💡 Recommendation: Add SERPAPI_KEY for better results\n"
+    
+    result += "\n=== EMAIL DISCOVERY METHODS ===\n"
+    if hibp_key:
+        result += "✓ Have I Been Pwned: Breach detection\n"
+    else:
+        result += "❌ HIBP API not configured\n"
+    
+    if hunter_key:
+        result += "✓ Hunter.io: Professional email discovery\n"
+    else:
+        result += "❌ Hunter.io API not configured\n"
+    
+    result += "✓ Pattern Generation: Common email formats\n"
     
     end = datetime.now()
     duration = (end - start).total_seconds()
@@ -40,11 +55,12 @@ def social_node(state: OSINTState) -> dict:
     result += "\n\n=== ANALYSIS METHODS USED ===\n"
     result += "✓ GitHub: REST API (profile + repositories)\n"
     result += "✓ Reddit: JSON API (profile + comments)\n"
+    result += "✓ YouTube: Data API v3 (channels + statistics)\n"
+    result += "✓ Twitter/X: API v2 (timeline + metrics)\n"
+    result += "✓ Email Discovery: HIBP + Hunter.io + pattern generation\n"
     result += "⚠ LinkedIn: Google dorking only (no direct API)\n"
-    result += "⚠ Twitter/X: Search strategies only (no API access)\n"
-    result += "❌ Instagram: Not implemented\n"
-    result += "❌ Facebook: Not implemented\n"
-    result += "❌ YouTube: Not implemented\n"
+    result += "❌ Instagram: Not implemented (requires business account)\n"
+    result += "❌ Facebook: Not implemented (high privacy restrictions)\n"
     result += "❌ SoundCloud: Not implemented\n"
     
     end = datetime.now()

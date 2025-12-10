@@ -66,14 +66,17 @@ CRITICAL REPORTING ACCURACY:
 - Every claim must be verifiable and quantified where possible
 - Show confidence scores ONCE per section in headers: "## Section (Confidence: 95%)"
 - Include "ANALYSIS METHOD" for each platform showing what tool was used
+- Do NOT include comparison tables between subjects unless BOTH have equal analysis depth
+- Remove useless timeline entries like "Current investigation date"
+- If multiple subjects identified, clearly state analysis limitations for each
 
 Report structure:
 - Executive Summary (specific findings, not generalizations)
 - Report Metadata (Generation Date: {current_date}, Investigation Status, Data Quality, Actual Platforms Analyzed)
-- Target Overview
-- Digital Footprint Analysis
-- Platform-by-Platform Breakdown (ONLY platforms with actual data)
-- Timeline of Activity
+- Target Overview (separate sections per subject if multiple found)
+- Digital Footprint Analysis (ONLY for subjects with actual platform data)
+- Platform-by-Platform Breakdown (ONLY platforms with actual data, ONLY for primary subject)
+- Secondary Subject Status (if applicable - explain why limited analysis)
 - Key Findings and Patterns
 - Confidence Assessment
 - Sources and References

@@ -94,11 +94,33 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
             output += f"   URL: {finding['link']}\n"
             output += f"   {finding['snippet']}\n\n"
 
-        # Extract identifiers
-        identifiers = _extract_identifiers("\n".join([f["snippet"] for f in findings]))
+        # Extract identifiers from all text
+        all_text = "\n".join([f["title"] + " " + f["snippet"] for f in findings])
+        identifiers = _extract_identifiers(all_text)
         if identifiers:
             output += "\nExtracted Identifiers:\n"
             output += identifiers
+        
+        # Search for additional contact patterns
+        contact_info = _search_contact_patterns(all_text)
+        if contact_info:
+            output += "\nContact Information:\n"
+            output += contact_info
+        
+        # Enhanced email discovery
+        from tools.api_tools import enhanced_email_discovery, discover_emails_from_text
+        
+        # Discover emails from search results
+        found_emails = discover_emails_from_text(all_text, query)
+        if found_emails:
+            output += f"\nDiscovered Emails:\n"
+            for email in found_emails:
+                output += f"  - {email}\n"
+        
+        # Try enhanced email discovery if we have a person name
+        if " " in query and not "@" in query:  # Looks like a name
+            email_discovery = enhanced_email_discovery(query)
+            output += f"\n{email_discovery}"
 
         logger.info(f"SerpAPI returned {len(findings)} results for: {query}")
         # write checkpoint for google search
@@ -192,17 +214,30 @@ def _extract_identifiers(text: str) -> str:
     """Extract emails, phones, usernames from text"""
     identifiers = []
 
-    # Extract emails
-    emails = re.findall(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", text)
+    # Extract emails (enhanced patterns)
+    email_patterns = [
+        r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b",  # Standard
+        r"\b[A-Za-z0-9._%+-]+\s*\[?at\]?\s*[A-Za-z0-9.-]+\s*\[?dot\]?\s*[A-Z|a-z]{2,}\b",  # Obfuscated
+    ]
+    emails = set()
+    for pattern in email_patterns:
+        emails.update(re.findall(pattern, text, re.IGNORECASE))
     if emails:
-        identifiers.append(f"Emails: {', '.join(set(emails))}")
+        identifiers.append(f"Emails: {', '.join(emails)}")
 
-    # Extract phone numbers (basic pattern)
-    phones = re.findall(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b", text)
+    # Extract phone numbers (enhanced patterns)
+    phone_patterns = [
+        r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b",  # US format
+        r"\+\d{1,3}[-.]?\d{1,4}[-.]?\d{1,4}[-.]?\d{1,9}\b",  # International
+        r"\b\d{2,3}[-.]?\d{7,8}\b",  # Israeli format
+    ]
+    phones = set()
+    for pattern in phone_patterns:
+        phones.update(re.findall(pattern, text))
     if phones:
-        identifiers.append(f"Phones: {', '.join(set(phones))}")
+        identifiers.append(f"Phones: {', '.join(phones)}")
 
-    # Extract potential usernames (@ mentions)
+    # Extract usernames and handles
     usernames = re.findall(r"@([A-Za-z0-9_]+)", text)
     if usernames:
         identifiers.append(f"Usernames: {', '.join(set(usernames))}")
@@ -225,8 +260,8 @@ def social_media_search(target: str) -> str:
     results.append(f"Social Media Search for: {target}\n")
     results.append("=" * 60 + "\n")
 
-    # Search each platform (only implemented ones)
-    platforms = ["linkedin", "twitter", "github", "reddit", "instagram", "facebook", "youtube", "soundcloud"]
+    # Search each platform (prioritize implemented ones)
+    platforms = ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]
     for platform in platforms:
         platform_result = _search_platform(platform, target)
         results.append(platform_result)
@@ -254,7 +289,9 @@ def _search_platform(platform: str, target: str) -> str:
         output += _search_github(target)
     elif platform == "reddit":
         output += _search_reddit(target)
-    elif platform in ["instagram", "facebook", "youtube", "soundcloud"]:
+    elif platform == "youtube":
+        output += _search_youtube(target)
+    elif platform in ["instagram", "facebook", "soundcloud"]:
         output += f"❌ {platform.upper()}: Not implemented\n"
         output += f"Manual search required: Search '{target}' on {platform}.com\n"
         output += f"Note: {platform.title()} API requires special access/approval\n"
@@ -276,15 +313,19 @@ def _search_linkedin(target: str) -> str:
 
 
 def _search_twitter(target: str) -> str:
-    """Search Twitter/X"""
-    return (
-        f"❌ Twitter/X: Not implemented (search strategies only)\n"
-        f"Manual search recommendations:\n"
-        f"1. Search: @{target.replace(' ', '')}\n"
-        f'2. Search: "{target}" on twitter.com\n'
-        f'3. Google: site:twitter.com "{target}"\n'
-        f"Note: Add TWITTER_BEARER_TOKEN to .env for API access\n"
-    )
+    """Search Twitter/X with API"""
+    from tools.api_tools import search_twitter_timeline
+    
+    username = target.replace(' ', '').lower()
+    result = search_twitter_timeline(username)
+    
+    if "not configured" in result or "not found" in result:
+        result += f"\nManual search recommendations:\n"
+        result += f"1. Search: @{username}\n"
+        result += f'2. Search: "{target}" on twitter.com\n'
+        result += f'3. Google: site:twitter.com "{target}"\n'
+    
+    return result
 
 
 def _search_github(target: str) -> str:
@@ -409,3 +450,37 @@ def _search_reddit(target: str) -> str:
         
     except Exception as e:
         return f"Reddit search error: {str(e)}\n"
+
+
+def _search_youtube(target: str) -> str:
+    """Search YouTube with API"""
+    from tools.api_tools import search_youtube_channel
+    
+    result = search_youtube_channel(target)
+    
+    if "not configured" in result:
+        result += f"\nManual search: Search '{target}' on youtube.com\n"
+    
+    return result
+
+
+def _search_contact_patterns(text: str) -> str:
+    """Search for contact information patterns"""
+    contacts = []
+    
+    # LinkedIn profile patterns
+    linkedin_profiles = re.findall(r"linkedin\.com/in/([A-Za-z0-9-]+)", text, re.IGNORECASE)
+    if linkedin_profiles:
+        contacts.append(f"LinkedIn: {', '.join(set(linkedin_profiles))}")
+    
+    # Skype handles
+    skype_handles = re.findall(r"skype:([A-Za-z0-9._-]+)", text, re.IGNORECASE)
+    if skype_handles:
+        contacts.append(f"Skype: {', '.join(set(skype_handles))}")
+    
+    # Telegram handles
+    telegram_handles = re.findall(r"t\.me/([A-Za-z0-9_]+)", text, re.IGNORECASE)
+    if telegram_handles:
+        contacts.append(f"Telegram: {', '.join(set(telegram_handles))}")
+    
+    return "\n".join(contacts) if contacts else ""
