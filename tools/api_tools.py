@@ -270,3 +270,24 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None) -> str
                 output += hibp_result
     
     return output
+
+
+def test_youtube_api():
+    """Test YouTube API connection"""
+    print("Testing YouTube API...")
+    result = search_youtube_channel("test")
+    print(result)
+
+
+def test_twitter_api():
+    """Test Twitter API connection"""
+    print("Testing Twitter API...")
+    result = search_twitter_timeline("twitter")
+    print(result)
+
+
+def test_hunter_api():
+    """Test Hunter.io API connection"""
+    print("Testing Hunter.io API...")
+    result = search_hunter_emails("example.com", "John Doe")
+    print(result)
