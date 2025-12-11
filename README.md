@@ -1,5 +1,7 @@
 # Digital Footprint Investigator
 
+> **⚠️ EDUCATIONAL USE ONLY**: This tool is designed for educational purposes, security research, and legitimate OSINT investigations. Users must comply with all applicable laws and ethical guidelines. Misuse for stalking, harassment, or illegal activities is strictly prohibited.
+
 A multi-agent OSINT (Open Source Intelligence) tool built with LangGraph for investigating digital footprints across the web.
 
 ## 🎯 Features
@@ -354,20 +356,43 @@ LOG_LEVEL=DEBUG  # DEBUG, INFO, WARNING, ERROR
 
 ## 🔒 Privacy & Ethics
 
-**Important**: This tool is for legitimate OSINT purposes only:
-- ✅ Security research
-- ✅ Due diligence
-- ✅ Journalism
-- ✅ Personal privacy audits
-- ❌ Stalking or harassment
-- ❌ Unauthorized surveillance
-- ❌ Illegal activities
+**⚠️ IMPORTANT DISCLAIMER**: This tool is for **EDUCATIONAL AND LEGITIMATE PURPOSES ONLY**
 
-Always:
-- Respect privacy laws and regulations
-- Only use publicly available information
-- Get proper authorization when required
-- Use responsibly and ethically
+### ✅ Appropriate Uses:
+- **Security research** and vulnerability assessment
+- **Due diligence** for business purposes
+- **Journalism** and investigative reporting
+- **Personal privacy audits** (your own digital footprint)
+- **Academic research** on OSINT methodologies
+- **Privacy awareness education**
+- **Identity verification** with proper consent
+
+### ❌ Prohibited Uses:
+- **Stalking or harassment** of any individual
+- **Unauthorized surveillance** or monitoring
+- **Identity theft** or fraudulent activities
+- **Discrimination** in employment, housing, or services
+- **Doxxing** or publishing private information
+- **Any illegal activities** under applicable laws
+
+### 🛡️ Ethical Guidelines:
+- **Respect privacy laws** (GDPR, CCPA, etc.)
+- **Use only publicly available information**
+- **Obtain proper authorization** when required
+- **Minimize data collection** to what's necessary
+- **Secure any collected data** appropriately
+- **Delete data** when no longer needed
+- **Report responsibly** - don't cause harm
+
+### ⚖️ Legal Compliance:
+Users are responsible for ensuring their use complies with:
+- Local and international privacy laws
+- Platform Terms of Service
+- Computer Fraud and Abuse Act (CFAA)
+- Data protection regulations
+- Professional ethical standards
+
+**By using this tool, you agree to use it responsibly and ethically.**
 
 ## 🤝 Contributing
 

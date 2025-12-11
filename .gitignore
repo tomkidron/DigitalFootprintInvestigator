@@ -1,12 +1,21 @@
+# Environment variables (contains API keys)
+.env
+
+# Generated reports (may contain personal data)
+reports/*.md
+reports/*.html
+reports/*.json
+reports/*.pdf
+
+# Log files (may contain sensitive information)
+logs/*.log
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
 build/
 develop-eggs/
 dist/
@@ -22,42 +31,27 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Environment
-.env
-.venv
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
 
 # IDE
-.vscode/*
-!.vscode/launch.json
-!.vscode/settings.json
+.vscode/
 .idea/
-.devcontainer/
 *.swp
 *.swo
-*~
-
-# Logs
-logs/
-*.log
-
-# Reports
-reports/
-*.md
-!README.md
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Cache
-.cache/
-*.cache
+# Docker
+.dockerignore
 
-# Jupyter
-.ipynb_checkpoints/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+# Temporary files
+*.tmp
+*.temp
