@@ -15,14 +15,19 @@ A multi-agent OSINT (Open Source Intelligence) tool built with LangGraph for inv
 - **Platform Coverage**:
   - Google Search (with SerpAPI support)
   - LinkedIn
-  - Twitter/X
-  - GitHub
+  - Twitter/X (with API v2 integration)
+  - GitHub (with enhanced API integration)
   - Reddit
+  - YouTube (with Data API integration)
   - Instagram (limited)
   - Facebook (limited)
+  - Email verification (Hunter.io)
+  - Breach data (Have I Been Pwned)
 
 - **Parallel Execution**: Google and social media searches run simultaneously
+- **Advanced Analysis**: Optional timeline correlation, network analysis, and deep content analysis
 - **Checkpointing**: Built-in state management for resumable workflows
+- **API Integration**: Multiple API integrations with graceful fallbacks
 - **Extensible**: Modular design for adding new platforms and nodes
 - **Privacy-Aware**: Uses publicly available information only
 
@@ -92,10 +97,10 @@ docker-compose run --rm osint-tool python main.py "John Doe"
 5. Press **F5** to debug with full IDE support
 
 **Perfect for:**
-- Learning how the agents work
+- Learning how the workflow works
 - Debugging tool behavior
 - Developing new features
-- Understanding CrewAI internals
+- Understanding LangGraph internals
 
 ---
 
@@ -158,12 +163,14 @@ DigitalFootprintInvestigator/
 │   ├── nodes/
 │   │   ├── search.py         # Search nodes (Google, Social)
 │   │   ├── analysis.py       # Analysis node
+│   │   ├── advanced.py       # Advanced analysis node
 │   │   └── report.py         # Report generation node
 │   ├── state.py              # LangGraph state definition
 │   └── workflow.py           # Workflow orchestration
 ├── tools/
 │   ├── __init__.py
-│   └── search_tools.py       # Google & social media search functions
+│   ├── search_tools.py       # Google & social media search functions
+│   └── api_tools.py          # API integration functions
 ├── utils/
 │   ├── __init__.py
 │   ├── logger.py             # Logging configuration
@@ -171,9 +178,13 @@ DigitalFootprintInvestigator/
 ├── reports/                  # Generated reports (created automatically)
 ├── logs/                     # Log files (created automatically)
 ├── main.py                   # Entry point
+├── config.yaml               # Main configuration file
 ├── .env                      # API keys (create from .env.example)
 ├── .env.example              # Environment template
-└── requirements.txt          # Python dependencies
+├── requirements.txt          # Python dependencies
+├── Dockerfile                # Docker container definition
+├── docker-compose.yml        # Docker orchestration
+└── .dockerignore             # Docker build exclusions
 ```
 
 ## ⚙️ Configuration
@@ -200,13 +211,12 @@ platforms:
     max_tweets: 50
 ```
 
-**Agent Settings**:
+**Advanced Analysis Settings**:
 ```yaml
-agents:
-  google_agent:
-    enabled: true
-    retry_attempts: 3
-    extract_emails: true    # Extract emails from results
+advanced_analysis:
+  timeline_correlation: false
+  network_analysis: false
+  deep_content_analysis: false
 ```
 
 **Report Settings**:
@@ -227,10 +237,13 @@ ANTHROPIC_API_KEY=sk-ant-...
 LLM_PROVIDER=anthropic
 LLM_MODEL=claude-sonnet-4-5
 
-# Optional APIs
+# Optional APIs for Enhanced Results
 SERPAPI_KEY=...             # Better Google results
-TWITTER_BEARER_TOKEN=...    # Twitter API access
+TWITTER_BEARER_TOKEN=...    # Twitter API v2 access
+YOUTUBE_API_KEY=...         # YouTube Data API
 GITHUB_TOKEN=...            # GitHub API (higher rate limits)
+HUNTER_API_KEY=...          # Email verification and discovery
+HIBP_API_KEY=...            # Have I Been Pwned breach data
 
 # Application Settings
 DEBUG_MODE=false
@@ -255,6 +268,22 @@ python main.py "jane.smith@example.com"
 
 ```bash
 python main.py "@janesmith"
+```
+
+### Advanced Analysis (Optional)
+
+```bash
+# Timeline correlation analysis
+python main.py "Jane Smith" --timeline
+
+# Network relationship analysis
+python main.py "Jane Smith" --network
+
+# Deep content analysis
+python main.py "Jane Smith" --deep
+
+# All advanced features
+python main.py "Jane Smith" --timeline --network --deep
 ```
 
 ## 📊 Output
@@ -295,29 +324,27 @@ def _search_new_platform(self, target: str) -> str:
     pass
 ```
 
-### Adding a New Tool
+### Adding a New Node
 
-1. Create tool in `tools/`:
+1. Create node in `graph/nodes/`:
 ```python
-from crewai_tools import BaseTool
+from ..state import OSINTState
 
-class MyCustomTool(BaseTool):
-    name: str = "My Tool"
-    description: str = "What it does"
-    
-    def _run(self, input: str) -> str:
-        # Implementation
-        pass
+def my_custom_node(state: OSINTState) -> OSINTState:
+    """Custom processing node"""
+    # Implementation
+    return {
+        "messages": state["messages"] + ["Custom processing complete"],
+        "status": "custom_complete"
+    }
 ```
 
-2. Add to agent in `agents/orchestrator.py`:
+2. Add to workflow in `graph/workflow.py`:
 ```python
-from tools.my_tools import MyCustomTool
+from .nodes.my_node import my_custom_node
 
-agent = Agent(
-    tools=[MyCustomTool(config)],
-    ...
-)
+workflow.add_node("custom", my_custom_node)
+workflow.add_edge("analysis", "custom")
 ```
 
 ## 🐛 Troubleshooting
@@ -344,7 +371,7 @@ agent = Agent(
 ## 📝 Logs
 
 Logs are saved to `logs/osint_YYYYMMDD.log` with detailed information about:
-- Agent activities
+- Node executions
 - Tool executions
 - Errors and warnings
 - API calls
