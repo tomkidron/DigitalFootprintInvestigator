@@ -314,6 +314,14 @@ def _search_linkedin(target: str) -> str:
 
 def _search_twitter(target: str) -> str:
     """Search Twitter/X with API"""
+    # Check if target contains non-Latin characters
+    if re.search(r'[^\x00-\x7F]', target):
+        return (
+            "⚠️ TWITTER: Skipped (contains non-Latin characters)\n"
+            f"Twitter usernames only support Latin characters (A-Z, 0-9, _)\n"
+            f"Manual search required: Search '{target}' on twitter.com\n"
+        )
+    
     from tools.api_tools import search_twitter_timeline
     
     username = target.replace(' ', '').lower()
