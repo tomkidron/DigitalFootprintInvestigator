@@ -19,6 +19,7 @@ def get_llm():
 def analysis_node(state):
     """Analyze collected data and extract patterns"""
     start = datetime.now()
+    current_date = start.strftime('%Y-%m-%d')
     print(f"\n[{start.strftime('%H:%M:%S')}] 📊 Analysis started...")
     target = state["target"]
     google_data = "\n".join(state.get("google_data", []))
@@ -28,6 +29,16 @@ def analysis_node(state):
     
     prompt = f"""Analyze and correlate all gathered intelligence on: {target}
 
+IMPORTANT: Today's date is {current_date}. Use this to validate any dates found in the data. Flag dates that are in the future as potential errors.
+
+CRITICAL ANALYSIS RULES:
+- Do NOT extrapolate patterns from single data points
+- Do NOT claim "consistent themes" unless you have 3+ examples
+- Do NOT assume series/patterns exist based on one video/post
+- Always specify sample size when making behavioral claims
+- Use phrases like "single example suggests" instead of "consistent pattern"
+- Flag insufficient data clearly in your analysis
+
 Your objectives:
 1. Cross-reference findings from Google and social media searches
 2. Identify patterns in usernames, emails, posting behavior
@@ -36,6 +47,7 @@ Your objectives:
 5. Flag any inconsistencies or conflicting information
 6. Create a timeline of digital activity
 7. Identify gaps in information that need further investigation
+8. Validate all dates against today's date ({current_date})
 
 GOOGLE SEARCH FINDINGS:
 {google_data}
@@ -46,7 +58,7 @@ SOCIAL MEDIA FINDINGS:
 Provide an analytical report containing:
 - Correlation matrix showing connections between findings
 - Pattern analysis (usernames, emails, behaviors)
-- Timeline of digital activity
+- Timeline of digital activity (with date validation)
 - Confidence-scored profile of the target
 - List of verified facts vs. probable information
 - Recommendations for additional investigation"""
