@@ -8,7 +8,19 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Streamlit Configuration
+    STREAMLIT_SERVER_PORT=8501 \
+    STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
+    STREAMLIT_SERVER_ENABLE_CORS=false \
+    STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false \
+    STREAMLIT_SERVER_HEADLESS=true
+
+# Install system dependencies (curl for healthcheck)
+# Clean up apt cache to keep image small
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
 COPY requirements.txt .
@@ -27,5 +39,14 @@ RUN mkdir -p reports logs \
 # Use a non-root user for running the app
 USER appuser
 
-# Set default command
-CMD ["python", "main.py"]
+# Expose Streamlit port
+EXPOSE 8501
+
+# Healthcheck to ensure container is ready
+# Use --fail to return non-zero exit code if HTTP status is error
+# Increase interval to avoid spamming the logs/server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+
+# Set default command to run Streamlit
+CMD ["streamlit", "run", "app.py"]

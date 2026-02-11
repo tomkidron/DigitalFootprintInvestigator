@@ -3,6 +3,10 @@ services:
     build: .
     container_name: digital-footprint-investigator
 
+    # Map Streamlit port
+    ports:
+      - "8501:8501"
+
     # Mount current directory for live code updates
     volumes:
       - .:/app
@@ -13,8 +17,5 @@ services:
     env_file:
       - .env
 
-    # Keep container running for interactive use
-    stdin_open: true
-    tty: true
-    # Override default command for interactive shell
-    # command: /bin/bash
+    # Restart policy
+    restart: unless-stopped

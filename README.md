@@ -60,6 +60,14 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 3. **Run investigation**:
+
+**Option A: Web UI (Recommended)**
+```bash
+docker-compose up --build
+```
+Open `http://localhost:8501` in your browser.
+
+**Option B: CLI Mode**
 ```bash
 docker-compose run --rm osint-tool python main.py "John Doe"
 ```

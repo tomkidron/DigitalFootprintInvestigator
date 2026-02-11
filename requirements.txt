@@ -15,3 +15,6 @@ google-api-python-client>=2.100.0
 
 # New API dependencies
 tweepy>=4.14.0  # Twitter API v2
+
+# UI Dependencies
+streamlit>=1.30.0
