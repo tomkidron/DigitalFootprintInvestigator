@@ -18,14 +18,22 @@ st.set_page_config(
 # Load environment variables
 load_dotenv()
 
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+
 class StreamlitLogHandler(logging.Handler):
     """Custom logging handler to send logs to a Streamlit container"""
     def __init__(self, container_placeholder):
         super().__init__()
         self.container_placeholder = container_placeholder
         self.logs = []
+        # Capture the context from the main thread where the handler is created
+        self.ctx = get_script_run_ctx()
 
     def emit(self, record):
+        # If calling from a thread without context, attach the captured context
+        if not get_script_run_ctx():
+            add_script_run_ctx(ctx=self.ctx)
+            
         msg = self.format(record)
         self.logs.append(msg)
         # Keep only last 50 logs to avoid overflow
@@ -195,8 +203,10 @@ def main():
                     st.session_state.latest_report_file = latest_file
                     
             except Exception as e:
-                st.session_state.report_content = f"### Error\nAn error occurred during investigation: {str(e)}"
-                st.error(f"An error occurred: {str(e)}")
+                import traceback
+                error_details = traceback.format_exc()
+                st.session_state.report_content = f"### Error\nAn error occurred during investigation:\n\n```\n{error_details}\n```"
+                st.error(f"An error occurred. Check the report section for details.")
             finally:
                 root_logger.removeHandler(st_handler)
                 st.session_state.processing = False

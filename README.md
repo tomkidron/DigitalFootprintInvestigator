@@ -72,6 +72,16 @@ Open `http://localhost:8501` in your browser.
 docker-compose run --rm osint-tool python main.py "John Doe"
 ```
 
+## Troubleshooting & Known Issues
+
+1.  **Page Refresh Hangs (Docker on Windows)**:
+    -   Cause: Streamlit's file watcher struggles with Docker volumes on Windows.
+    -   Fix: We set `fileWatcherType = "none"` in `.streamlit/config.toml`. If it unsets, re-add it.
+
+2.  **Known Console Warnings (Safe to Ignore)**:
+    -   `file_cache is only supported with oauth2client<4.0.0`: Harmless warning from Google API client.
+    -   `missing ScriptRunContext`: Occasional startup warning, patched in `app.py`.
+
 **Why Docker?**
 - ✅ Works identically on Windows, Mac, and Linux
 - ✅ No Python version conflicts
