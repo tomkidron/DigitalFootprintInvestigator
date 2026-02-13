@@ -14,12 +14,27 @@ ENV PYTHONUNBUFFERED=1 \
     STREAMLIT_SERVER_ADDRESS=0.0.0.0 \
     STREAMLIT_SERVER_ENABLE_CORS=false \
     STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false \
-    STREAMLIT_SERVER_HEADLESS=true
+    STREAMLIT_SERVER_HEADLESS=true \
+    # Playwright Configuration
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-# Install system dependencies (curl for healthcheck)
-# Clean up apt cache to keep image small
+# Install system dependencies (curl for healthcheck + Playwright deps)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (for better caching)
@@ -27,6 +42,12 @@ COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Install Playwright browsers and their system dependencies
+RUN mkdir -p /ms-playwright && \
+    playwright install-deps chromium && \
+    playwright install chromium && \
+    chmod -R 777 /ms-playwright
 
 # Copy application code
 COPY . .

@@ -19,3 +19,21 @@ services:
 
     # Restart policy
     restart: unless-stopped
+    shm_size: 2gb
+
+  tests:
+    build: .
+    container_name: osint-tests
+    volumes:
+      - .:/app
+      - ./reports:/app/reports
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=.
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    command: [ "pytest", "tests/ui" ]
+    depends_on:
+      - osint-tool
+    shm_size: 2gb
