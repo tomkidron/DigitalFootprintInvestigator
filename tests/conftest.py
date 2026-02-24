@@ -2,6 +2,8 @@ import pytest
 import subprocess
 import time
 import os
+import urllib.request
+import urllib.error
 from playwright.sync_api import sync_playwright
 
 @pytest.fixture(scope="session")
@@ -22,7 +24,17 @@ def streamlit_app():
             stderr=subprocess.PIPE,
             env={**os.environ}
         )
-        time.sleep(10) # Give it time to start
+        # Poll health endpoint instead of sleeping blindly
+        health_url = "http://localhost:8502/_stcore/health"
+        for attempt in range(30):
+            try:
+                urllib.request.urlopen(health_url, timeout=1)
+                break  # server is up
+            except (urllib.error.URLError, OSError):
+                time.sleep(1)
+        else:
+            proc.terminate()
+            raise RuntimeError("Streamlit did not start within 30 seconds")
         yield "http://localhost:8502"
         proc.terminate()
 

@@ -10,13 +10,13 @@ reports/*.pdf
 # Log files (may contain sensitive information)
 logs/*.log
 
-# Test files (temporary, should not be committed)
-test_*.py
-*_test.py
+# Temporary/ad-hoc test files in root only (NOT the tests/ suite)
+/test_*.py
+/*_test.py
 tests/temp_*.py
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so

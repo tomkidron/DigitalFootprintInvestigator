@@ -12,6 +12,11 @@ services:
       - .:/app
       - ./reports:/app/reports
       - ./logs:/app/logs
+      # Anonymous volumes prevent Docker-generated dirs from leaking to host
+      - /app/.venv
+      - /app/venv
+      - /app/__pycache__
+      - /app/.pytest_cache
 
     # Load environment variables from .env file
     env_file:
@@ -28,6 +33,11 @@ services:
       - .:/app
       - ./reports:/app/reports
       - ./logs:/app/logs
+      # Anonymous volumes prevent Docker-generated dirs from leaking to host
+      - /app/.venv
+      - /app/venv
+      - /app/__pycache__
+      - /app/.pytest_cache
     env_file:
       - .env
     environment:
