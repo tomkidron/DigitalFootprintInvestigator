@@ -30,14 +30,18 @@ def google_search(query: str) -> str:
         # Add delay to avoid rate-limiting (important for free tier)
         sleep(2)
 
+        tavily_key = os.getenv("TAVILY_API_KEY")
         serpapi_key = os.getenv("SERPAPI_KEY")
 
-        if serpapi_key and serpapi_key.strip():
+        if tavily_key and tavily_key.strip():
+            logger.debug("Using Tavily for web search")
+            return _search_with_tavily(query, tavily_key)
+        elif serpapi_key and serpapi_key.strip():
             logger.debug("Using SerpAPI for Google search")
             return _search_with_serpapi(query, serpapi_key)
         else:
             logger.warning(
-                "SERPAPI_KEY not configured. Using fallback googlesearch library (limited reliability). Recommend setting SERPAPI_KEY in .env"
+                "TAVILY_API_KEY and SERPAPI_KEY not configured. Using fallback googlesearch library (limited reliability). Recommend setting TAVILY_API_KEY in .env"
             )
             result = _search_with_googlesearch(query)
             if "error" in result.lower() or "not found" in result.lower():
@@ -119,6 +123,73 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
     except Exception as e:
         logger.error(f"SerpAPI search error: {str(e)}", exc_info=True)
         return f"SerpAPI search error: {str(e)}\nPlease check your SERPAPI_KEY and try again."
+
+
+def _search_with_tavily(query: str, api_key: str) -> str:
+    """Search using Tavily API (recommended, high relevance for OSINT queries)"""
+    try:
+        from tavily import TavilyClient
+
+        logger.debug(f"Tavily request: {query}")
+        client = TavilyClient(api_key=api_key)
+        response = client.search(
+            query=query,
+            max_results=10,
+            search_depth="advanced",
+        )
+
+        findings = []
+        for result in response.get("results", []):
+            findings.append(
+                {
+                    "title": result.get("title", ""),
+                    "link": result.get("url", ""),
+                    "snippet": result.get("content", ""),
+                }
+            )
+
+        # Format results (same structure as _search_with_serpapi)
+        output = f"Google Search Results for: {query}\n\n"
+        for i, finding in enumerate(findings, 1):
+            output += f"{i}. {finding['title']}\n"
+            output += f"   URL: {finding['link']}\n"
+            output += f"   {finding['snippet']}\n\n"
+
+        # Extract identifiers from all text
+        all_text = "\n".join([f["title"] + " " + f["snippet"] for f in findings])
+        identifiers = _extract_identifiers(all_text)
+        if identifiers:
+            output += "\nExtracted Identifiers:\n"
+            output += identifiers
+
+        # Search for additional contact patterns
+        contact_info = _search_contact_patterns(all_text)
+        if contact_info:
+            output += "\nContact Information:\n"
+            output += contact_info
+
+        # Enhanced email discovery
+        from tools.api_tools import discover_emails_from_text, enhanced_email_discovery
+
+        found_emails = discover_emails_from_text(all_text, query)
+        if found_emails:
+            output += "\nDiscovered Emails:\n"
+            for email in found_emails:
+                output += f"  - {email}\n"
+
+        if " " in query and "@" not in query:  # Looks like a name
+            email_discovery = enhanced_email_discovery(query)
+            output += f"\n{email_discovery}"
+
+        logger.info(f"Tavily returned {len(findings)} results for: {query}")
+        return output
+
+    except ImportError:
+        logger.error("tavily-python library not installed")
+        return "tavily-python library not installed. Install with: pip install tavily-python\n"
+    except Exception as e:
+        logger.error(f"Tavily search error: {str(e)}", exc_info=True)
+        return f"Tavily search error: {str(e)}\nPlease check your TAVILY_API_KEY and try again."
 
 
 def _search_with_googlesearch(query: str) -> str:
