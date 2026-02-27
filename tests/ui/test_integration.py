@@ -2,7 +2,7 @@
 Integration tests for the full investigation → report flow.
 
 These tests require:
-  - A valid ANTHROPIC_API_KEY or OPENAI_API_KEY set in the environment
+  - A valid ANTHROPIC_API_KEY set in the environment
   - The complete LangGraph workflow to execute successfully
 
 Run them explicitly with:
@@ -11,21 +11,25 @@ Run them explicitly with:
 Skip them in CI/CD with:
     pytest -m "not integration"
 """
+
 import os
+
 import pytest
+
 from tests.healer import SelfHealingPage
 
 
 def _has_llm_key():
-    return bool(os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"))
+    return bool(os.getenv("ANTHROPIC_API_KEY"))
 
 
 # ---------------------------------------------------------------------------
 # Report section tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No LLM API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
 def test_report_section_appears(page):
     """After a successful investigation the '📄 Investigation Report' subheader,
     markdown content, and 'Download Report' button must all be visible."""
@@ -45,7 +49,7 @@ def test_report_section_appears(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No LLM API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
 def test_download_button_present(page):
     """The download button must be labelled 'Download Report' and be visible
     after the investigation completes."""
@@ -61,7 +65,7 @@ def test_download_button_present(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No LLM API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
 def test_error_report_on_failure(page):
     """When the workflow encounters an error, the report section must display
     the error traceback (not just an st.error toast).
@@ -80,8 +84,51 @@ def test_error_report_on_failure(page):
 # Processing state test
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No LLM API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+def test_logs_expander_appears_during_investigation(page):
+    """Once 'Start Investigation' is clicked the 'Investigation Logs' expander
+    must become visible before the workflow completes."""
+    h_page = SelfHealingPage(page)
+
+    h_page.fill("input[aria-label='Target Identifier']", "Logs Test", "Target Identifier Input")
+    h_page.click("button:has-text('Start Investigation')", "Start Button")
+
+    logs_expander = page.locator("div[data-testid='stExpander']").filter(has_text="Investigation Logs")
+    logs_expander.wait_for(state="visible", timeout=15_000)
+    assert logs_expander.is_visible()
+    print("[OK] Investigation Logs expander appeared after starting investigation")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+def test_report_content_has_text(page):
+    """After a successful investigation the rendered report markdown must
+    contain non-trivial text (more than just the heading)."""
+    h_page = SelfHealingPage(page)
+
+    h_page.fill("input[aria-label='Target Identifier']", "Content Test", "Target Identifier Input")
+    h_page.click("button:has-text('Start Investigation')", "Start Button")
+
+    report_heading = page.get_by_text("Investigation Report", exact=False)
+    report_heading.wait_for(state="visible", timeout=180_000)
+
+    # The markdown block rendered by st.markdown should have substantial text.
+    # The stMarkdownContainer div holds the rendered report body.
+    report_body = page.locator("div[data-testid='stMarkdownContainer']").last
+    body_text = report_body.inner_text()
+    assert len(body_text.strip()) > 50, f"Report body is too short ({len(body_text)} chars): {body_text!r}"
+    print(f"[OK] Report body has {len(body_text)} characters of content")
+
+
+# ---------------------------------------------------------------------------
+# Processing state test
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
 def test_processing_button_disabled(page):
     """While the investigation is running the start button must be replaced by
     the disabled '⏳ Investigation in progress...' button.

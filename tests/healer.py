@@ -1,9 +1,11 @@
-import os
 import logging
-from playwright.sync_api import Page, ElementHandle
-from typing import Optional, List
+import os
+from typing import List
+
+from playwright.sync_api import ElementHandle, Page
 
 logger = logging.getLogger(__name__)
+
 
 class SelfHealingPage:
     def __init__(self, page: Page):
@@ -11,7 +13,7 @@ class SelfHealingPage:
 
     def find_element(self, selector: str, description: str = "") -> ElementHandle:
         """
-        Attempts to find an element using the primary selector. 
+        Attempts to find an element using the primary selector.
         If it fails, it tries fallback strategies and AI-based healing.
         """
         try:
@@ -19,22 +21,22 @@ class SelfHealingPage:
             element = self.page.wait_for_selector(selector, timeout=5000)
             if element:
                 return element
-        except Exception as e:
+        except Exception:
             logger.warning(f"Primary selector '{selector}' failed. Attempting healing...")
-            
+
         # 2. Fallback: Data-Testid
         if "data-testid" not in selector:
             testid_selector = f"[data-testid='{selector.strip('#').strip('.')}']"
             try:
                 return self.page.wait_for_selector(testid_selector, timeout=2000)
-            except:
+            except Exception:
                 pass
 
         # 3. Fallback: Text content (if description provided)
         if description:
             try:
                 return self.page.locator(f"text='{description}'").first.element_handle(timeout=2000)
-            except:
+            except Exception:
                 pass
 
         # 4. AI Healing (Simulation for now, call LLM if configured)
@@ -54,21 +56,23 @@ class SelfHealingPage:
                 placeholder = el.get_attribute("placeholder") or ""
                 testid = el.get_attribute("data-testid") or ""
                 aria = el.get_attribute("aria-label") or ""
-                
+
                 # Only include elements that have SOMETHING identifying them
                 if not any([text, placeholder, testid, aria]):
                     continue
 
-                snapshot.append({
-                    "index": len(snapshot),
-                    "tag": tag,
-                    "text": text[:100], # Truncate long text
-                    "placeholder": placeholder,
-                    "testid": testid,
-                    "aria-label": aria,
-                    "id": el.get_attribute("id") or ""
-                })
-            except:
+                snapshot.append(
+                    {
+                        "index": len(snapshot),
+                        "tag": tag,
+                        "text": text[:100],  # Truncate long text
+                        "placeholder": placeholder,
+                        "testid": testid,
+                        "aria-label": aria,
+                        "id": el.get_attribute("id") or "",
+                    }
+                )
+            except Exception:
                 continue
         return snapshot
 
@@ -76,20 +80,19 @@ class SelfHealingPage:
         """
         Uses an LLM to find the most likely element from a DOM snapshot.
         """
-        from langchain_anthropic import ChatAnthropic
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import SystemMessage, HumanMessage
         import json
 
+        from langchain_anthropic import ChatAnthropic
+        from langchain_core.messages import HumanMessage, SystemMessage
+
         logger.info(f"Triggering AI healing for '{description}' (failed selector: {selector})")
-        
+
         dom_snapshot = self._extract_dom_snapshot()
         if not dom_snapshot:
-             raise Exception("AI Healing failed: No interactive elements found in DOM snapshot.")
+            raise Exception("AI Healing failed: No interactive elements found in DOM snapshot.")
 
-        provider = os.getenv("LLM_PROVIDER", "anthropic")
-        model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-20240620")
-        llm = ChatAnthropic(model=model, temperature=0, timeout=30) if provider == "anthropic" else ChatOpenAI(model=model, temperature=0, timeout=30)
+        model = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
+        llm = ChatAnthropic(model=model, temperature=0, timeout=30)
 
         prompt = f"""
         A UI test failed to find an element with selector: {selector}
@@ -102,7 +105,7 @@ class SelfHealingPage:
         Return ONLY a JSON object with:
         1. "index": the value of the "index" field from the snapshot for the matching element
         2. "reason": a short explanation of why this matches
-        3. "suggested_selector": a reliable Playwright-specific selector for this element. 
+        3. "suggested_selector": a reliable Playwright-specific selector for this element.
            - Prefer data-testid: "[data-testid='...']"
            - Or aria-label: "[aria-label='...']"
            - Or placeholder: "input[placeholder='...']"
@@ -110,22 +113,24 @@ class SelfHealingPage:
         """
 
         try:
-            response = llm.invoke([
-                SystemMessage(content="You are a QA automation expert specializing in self-healing UI tests."),
-                HumanMessage(content=prompt)
-            ])
-            
+            response = llm.invoke(
+                [
+                    SystemMessage(content="You are a QA automation expert specializing in self-healing UI tests."),
+                    HumanMessage(content=prompt),
+                ]
+            )
+
             # Extract JSON from response (handling potential markdown wrapping)
             content = response.content.strip()
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
-                
+
             result = json.loads(content)
             suggested_selector = result.get("suggested_selector")
             logger.info(f"AI suggested new selector: {suggested_selector} (Reason: {result.get('reason')})")
-            
+
             return self.page.wait_for_selector(suggested_selector, timeout=5000)
         except Exception as e:
             logger.error(f"AI healing failed: {str(e)}")

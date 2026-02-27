@@ -2,7 +2,6 @@
 langgraph>=0.2.0
 langchain>=0.3.0
 langchain-anthropic>=0.3.0
-langchain-openai>=0.2.0
 langchain-community>=0.3.0
 
 # Keep existing dependencies
@@ -23,3 +22,8 @@ streamlit>=1.30.0
 pytest-playwright>=0.4.0
 pytest-asyncio>=0.23.0
 pytest-dotenv>=0.5.2
+
+# Dev tooling
+pre-commit>=4.0.0
+detect-secrets>=1.5.0
+ruff>=0.15.0

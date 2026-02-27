@@ -1,0 +1,10 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]  # Long string literals and UI calls are acceptable; ruff-format handles reformattable lines
+
+[lint.per-file-ignores]
+# Test files: allow assert statements and star imports from conftest
+"tests/*" = ["E501"]

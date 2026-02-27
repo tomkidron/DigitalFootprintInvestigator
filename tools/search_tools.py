@@ -2,19 +2,14 @@
 Search tools for OSINT investigation
 """
 
+import logging
 import os
 import re
-import logging
-import requests
 from time import sleep
-from pathlib import Path
+
+import requests
 
 logger = logging.getLogger("osint_tool")
-
-
-def write_checkpoint(name, query, output, out_dir, fmt):
-    """Stub for checkpoint writing"""
-    pass
 
 
 def google_search(query: str) -> str:
@@ -35,7 +30,6 @@ def google_search(query: str) -> str:
         # Add delay to avoid rate-limiting (important for free tier)
         sleep(2)
 
-        # Check if SerpAPI key is available
         serpapi_key = os.getenv("SERPAPI_KEY")
 
         if serpapi_key and serpapi_key.strip():
@@ -47,9 +41,7 @@ def google_search(query: str) -> str:
             )
             result = _search_with_googlesearch(query)
             if "error" in result.lower() or "not found" in result.lower():
-                logger.warning(
-                    f"Fallback search returned limited results for query: {query}"
-                )
+                logger.warning(f"Fallback search returned limited results for query: {query}")
             return result
 
     except Exception as e:
@@ -70,10 +62,8 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
         try:
             results = search.get_dict()
         except Exception as timeout_err:
-            logger.warning(
-                f"SerpAPI timeout/rate limit on query: {query}. Error: {str(timeout_err)}"
-            )
-            return f"⚠️ SerpAPI Rate Limit or Timeout\n\nQuery: {query}\n\nNote: SerpAPI may have rate-limited this request. Try again in a moment.\n"
+            logger.warning(f"SerpAPI timeout/rate limit on query: {query}. Error: {str(timeout_err)}")
+            return f"[WARN] SerpAPI Rate Limit or Timeout\n\nQuery: {query}\n\nNote: SerpAPI may have rate-limited this request. Try again in a moment.\n"
 
         # Extract organic results
         findings = []
@@ -100,36 +90,27 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
         if identifiers:
             output += "\nExtracted Identifiers:\n"
             output += identifiers
-        
+
         # Search for additional contact patterns
         contact_info = _search_contact_patterns(all_text)
         if contact_info:
             output += "\nContact Information:\n"
             output += contact_info
-        
+
         # Enhanced email discovery
-        from tools.api_tools import enhanced_email_discovery, discover_emails_from_text
-        
-        # Discover emails from search results
+        from tools.api_tools import discover_emails_from_text, enhanced_email_discovery
+
         found_emails = discover_emails_from_text(all_text, query)
         if found_emails:
-            output += f"\nDiscovered Emails:\n"
+            output += "\nDiscovered Emails:\n"
             for email in found_emails:
                 output += f"  - {email}\n"
-        
-        # Try enhanced email discovery if we have a person name
-        if " " in query and not "@" in query:  # Looks like a name
+
+        if " " in query and "@" not in query:  # Looks like a name
             email_discovery = enhanced_email_discovery(query)
             output += f"\n{email_discovery}"
 
         logger.info(f"SerpAPI returned {len(findings)} results for: {query}")
-        # write checkpoint for google search
-        try:
-            write_checkpoint(
-                "google", query, output, out_dir=Path("reports/checkpoints"), fmt="txt"
-            )
-        except Exception:
-            logger.debug("Failed to write google checkpoint")
         return output
 
     except ImportError:
@@ -150,12 +131,9 @@ def _search_with_googlesearch(query: str) -> str:
             for url in search(query, num_results=20, sleep_interval=2, timeout=10):
                 results.append(url)
         except Exception as e:
-            logger.warning(
-                f"Googlesearch library error (may be rate limited): {str(e)}"
-            )
-            # Return graceful error message
+            logger.warning(f"Googlesearch library error (may be rate limited): {str(e)}")
             return (
-                f"\n⚠️ WARNING: Search results may be incomplete\n\nGoogle Search Results for: {query}\n"
+                f"\n[WARN] Search results may be incomplete\n\nGoogle Search Results for: {query}\n"
                 f"Search Status: Limited/Rate-limited (free library with no API key)\n\n"
                 f"Status: {len(results)} results collected before timeout\n\n"
                 f"RECOMMENDATION: Add SERPAPI_KEY to .env for reliable Google searches\n"
@@ -164,21 +142,11 @@ def _search_with_googlesearch(query: str) -> str:
             )
 
         if not results:
-            output = f"\n⚠️ WARNING: No results returned (possible rate limiting)\n\n"
+            output = "\n[WARN] No results returned (possible rate limiting)\n\n"
             output += f"Google Search Results for: {query}\n"
-            output += f"Search Status: UNRELIABLE (using free googlesearch library without API key)\n\n"
-            output += f"The free googlesearch library may be rate-limited or blocked.\n"
-            output += f"RECOMMENDATION: Add SERPAPI_KEY to .env for accurate searches\n"
-            try:
-                write_checkpoint(
-                    "google",
-                    query,
-                    output,
-                    out_dir=Path("reports/checkpoints"),
-                    fmt="txt",
-                )
-            except Exception:
-                logger.debug("Failed to write google checkpoint")
+            output += "Search Status: UNRELIABLE (using free googlesearch library without API key)\n\n"
+            output += "The free googlesearch library may be rate-limited or blocked.\n"
+            output += "RECOMMENDATION: Add SERPAPI_KEY to .env for accurate searches\n"
             return output
 
         output = f"Google Search Results for: {query}\n"
@@ -187,15 +155,8 @@ def _search_with_googlesearch(query: str) -> str:
         for i, url in enumerate(results, 1):
             output += f"{i}. {url}\n"
 
-        output += "\n⚠️ Note: Using free search without API key. Results may be incomplete due to rate-limiting.\n"
+        output += "\n[WARN] Using free search without API key. Results may be incomplete due to rate-limiting.\n"
         output += "For reliable results with snippets, add SERPAPI_KEY to .env\n"
-
-        try:
-            write_checkpoint(
-                "google", query, output, out_dir=Path("reports/checkpoints"), fmt="txt"
-            )
-        except Exception:
-            logger.debug("Failed to write google checkpoint")
 
         return output
 
@@ -260,20 +221,11 @@ def social_media_search(target: str) -> str:
     results.append(f"Social Media Search for: {target}\n")
     results.append("=" * 60 + "\n")
 
-    # Search each platform (prioritize implemented ones)
     platforms = ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]
     for platform in platforms:
-        platform_result = _search_platform(platform, target)
-        results.append(platform_result)
+        results.append(_search_platform(platform, target))
 
-    full = "\n".join(results)
-    try:
-        write_checkpoint(
-            "social", target, full, out_dir=Path("reports/checkpoints"), fmt="txt"
-        )
-    except Exception:
-        logger.debug("Failed to write social checkpoint")
-    return full
+    return "\n".join(results)
 
 
 def _search_platform(platform: str, target: str) -> str:
@@ -292,11 +244,11 @@ def _search_platform(platform: str, target: str) -> str:
     elif platform == "youtube":
         output += _search_youtube(target)
     elif platform in ["instagram", "facebook", "soundcloud"]:
-        output += f"❌ {platform.upper()}: Not implemented\n"
+        output += f"[ERROR] {platform.upper()}: Not implemented\n"
         output += f"Manual search required: Search '{target}' on {platform}.com\n"
         output += f"Note: {platform.title()} API requires special access/approval\n"
     else:
-        output += f"❌ Platform {platform} not yet implemented\n"
+        output += f"[ERROR] Platform {platform} not yet implemented\n"
 
     return output
 
@@ -305,7 +257,7 @@ def _search_linkedin(target: str) -> str:
     """Search LinkedIn (via Google dorking)"""
     query = f'site:linkedin.com/in "{target}"'
     return (
-        f"⚠️ LinkedIn: Google dorking only (no direct API)\n"
+        f"[WARN] LinkedIn: Google dorking only (no direct API)\n"
         f"Search query: {query}\n"
         f"Manual verification required\n"
         f"Note: LinkedIn API requires special partnership\n"
@@ -314,25 +266,24 @@ def _search_linkedin(target: str) -> str:
 
 def _search_twitter(target: str) -> str:
     """Search Twitter/X with API"""
-    # Check if target contains non-Latin characters
-    if re.search(r'[^\x00-\x7F]', target):
+    if re.search(r"[^\x00-\x7F]", target):
         return (
-            "⚠️ TWITTER: Skipped (contains non-Latin characters)\n"
+            "[WARN] TWITTER: Skipped (contains non-Latin characters)\n"
             f"Twitter usernames only support Latin characters (A-Z, 0-9, _)\n"
             f"Manual search required: Search '{target}' on twitter.com\n"
         )
-    
+
     from tools.api_tools import search_twitter_timeline
-    
-    username = target.replace(' ', '').lower()
+
+    username = target.replace(" ", "").lower()
     result = search_twitter_timeline(username)
-    
+
     if "not configured" in result or "not found" in result:
-        result += f"\nManual search recommendations:\n"
+        result += "\nManual search recommendations:\n"
         result += f"1. Search: @{username}\n"
         result += f'2. Search: "{target}" on twitter.com\n'
         result += f'3. Google: site:twitter.com "{target}"\n'
-    
+
     return result
 
 
@@ -345,56 +296,56 @@ def _search_github(target: str) -> str:
         if github_token:
             headers["Authorization"] = f"token {github_token}"
 
-        # Get profile info
         profile_url = f"https://api.github.com/users/{username}"
         response = requests.get(profile_url, headers=headers, timeout=10)
 
         if response.status_code != 200:
             return f"No GitHub profile found for: {username}\n"
-            
+
         data = response.json()
-        output = f"✓ Found GitHub profile:\n"
+        output = "[OK] Found GitHub profile:\n"
         output += f"  Username: {data.get('login')}\n"
         output += f"  Name: {data.get('name', 'N/A')}\n"
         output += f"  Bio: {data.get('bio', 'N/A')}\n"
         output += f"  Location: {data.get('location', 'N/A')}\n"
         output += f"  Public Repos: {data.get('public_repos', 0)}\n"
         output += f"  Followers: {data.get('followers', 0)}\n"
-        
-        # Analyze repositories if any exist
-        if data.get('public_repos', 0) > 0:
+
+        if data.get("public_repos", 0) > 0:
             repos_url = f"https://api.github.com/users/{username}/repos?sort=updated&per_page=10"
             try:
                 repos_response = requests.get(repos_url, headers=headers, timeout=10)
                 if repos_response.status_code == 200:
                     repos = repos_response.json()
-                    
+
                     if repos:
                         languages = set()
                         recent_repos = []
-                        
-                        for repo in repos[:5]:  # Analyze top 5 repos
-                            repo_name = repo.get('name')
-                            description = repo.get('description', 'No description')
-                            language = repo.get('language')
-                            stars = repo.get('stargazers_count', 0)
-                            updated = repo.get('updated_at', '')[:10]  # Date only
-                            
+
+                        for repo in repos[:5]:
+                            repo_name = repo.get("name")
+                            description = repo.get("description", "No description")
+                            language = repo.get("language")
+                            stars = repo.get("stargazers_count", 0)
+                            updated = repo.get("updated_at", "")[:10]
+
                             if language:
                                 languages.add(language)
-                            
-                            recent_repos.append(f"{repo_name}: {description[:50]}... ({language}, ★{stars}, {updated})")
-                        
+
+                            recent_repos.append(
+                                f"{repo_name}: {description[:50]}... ({language}, {stars} stars, {updated})"
+                            )
+
                         output += f"  Languages: {', '.join(list(languages)[:5])}\n"
-                        output += f"  Recent Repositories:\n"
+                        output += "  Recent Repositories:\n"
                         for repo_info in recent_repos:
                             output += f"    - {repo_info}\n"
             except Exception:
                 output += "  Repository analysis: Limited access\n"
-        
+
         output += f"  Profile: {data.get('html_url')}\n"
         return output
-        
+
     except Exception as e:
         return f"GitHub search error: {str(e)}\n"
 
@@ -404,58 +355,56 @@ def _search_reddit(target: str) -> str:
     try:
         username = target.replace(" ", "").lower()
         headers = {"User-Agent": "OSINT Tool 1.0"}
-        
-        # Get profile info
+
         profile_url = f"https://www.reddit.com/user/{username}/about.json"
         response = requests.get(profile_url, headers=headers, timeout=10)
-        
+
         if response.status_code != 200:
             return f"No Reddit profile found for: {username}\n"
-            
+
         data = response.json()
         user_data = data.get("data", {})
-        
-        output = f"✓ Found Reddit profile:\n"
+
+        output = "[OK] Found Reddit profile:\n"
         output += f"  Username: {user_data.get('name')}\n"
         output += f"  Karma: {user_data.get('total_karma', 0)}\n"
         output += f"  Created: {user_data.get('created_utc', 'N/A')}\n"
-        
-        # Get recent comments for activity analysis
+
         comments_url = f"https://www.reddit.com/user/{username}/comments.json?limit=25"
         try:
             comments_response = requests.get(comments_url, headers=headers, timeout=10)
             if comments_response.status_code == 200:
                 comments_data = comments_response.json()
                 comments = comments_data.get("data", {}).get("children", [])
-                
+
                 if comments:
                     subreddits = set()
                     recent_activity = []
-                    
-                    for comment in comments[:10]:  # Analyze last 10 comments
+
+                    for comment in comments[:10]:
                         comment_data = comment.get("data", {})
                         subreddit = comment_data.get("subreddit")
-                        body = comment_data.get("body", "")[:100]  # First 100 chars
+                        body = comment_data.get("body", "")[:100]
                         score = comment_data.get("score", 0)
-                        
+
                         if subreddit:
                             subreddits.add(subreddit)
                         if body and body != "[deleted]":
                             recent_activity.append(f"r/{subreddit}: {body}... (score: {score})")
-                    
+
                     output += f"  Active Subreddits: {', '.join(list(subreddits)[:5])}\n"
                     output += f"  Recent Comments: {len(recent_activity)}\n"
-                    
+
                     if recent_activity:
                         output += "  Sample Activity:\n"
                         for activity in recent_activity[:3]:
                             output += f"    - {activity}\n"
         except Exception:
             output += "  Comment history: Access limited\n"
-        
+
         output += f"  Profile: https://reddit.com/user/{username}\n"
         return output
-        
+
     except Exception as e:
         return f"Reddit search error: {str(e)}\n"
 
@@ -463,32 +412,29 @@ def _search_reddit(target: str) -> str:
 def _search_youtube(target: str) -> str:
     """Search YouTube with API"""
     from tools.api_tools import search_youtube_channel
-    
+
     result = search_youtube_channel(target)
-    
+
     if "not configured" in result:
         result += f"\nManual search: Search '{target}' on youtube.com\n"
-    
+
     return result
 
 
 def _search_contact_patterns(text: str) -> str:
     """Search for contact information patterns"""
     contacts = []
-    
-    # LinkedIn profile patterns
+
     linkedin_profiles = re.findall(r"linkedin\.com/in/([A-Za-z0-9-]+)", text, re.IGNORECASE)
     if linkedin_profiles:
         contacts.append(f"LinkedIn: {', '.join(set(linkedin_profiles))}")
-    
-    # Skype handles
+
     skype_handles = re.findall(r"skype:([A-Za-z0-9._-]+)", text, re.IGNORECASE)
     if skype_handles:
         contacts.append(f"Skype: {', '.join(set(skype_handles))}")
-    
-    # Telegram handles
+
     telegram_handles = re.findall(r"t\.me/([A-Za-z0-9_]+)", text, re.IGNORECASE)
     if telegram_handles:
         contacts.append(f"Telegram: {', '.join(set(telegram_handles))}")
-    
+
     return "\n".join(contacts) if contacts else ""

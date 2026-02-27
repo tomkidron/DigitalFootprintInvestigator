@@ -29,17 +29,17 @@ class ProgressTracker:
         total = len(self.stages)
         progress = f"[{self.current_stage}/{total}]"
         self.logger.info(f"{progress} Starting: {stage_name}")
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Stage {self.current_stage}/{total}: {stage_name}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     def complete_stage(self, stage_name: str, details: str = ""):
         """Mark the completion of a stage"""
-        msg = f"✓ Completed: {stage_name}"
+        msg = f"[OK] Completed: {stage_name}"
         if details:
             msg += f" ({details})"
         self.logger.info(msg)
-        print(f"✓ {stage_name}")
+        print(f"[OK] {stage_name}")
 
     def log_finding(self, category: str, finding: str):
         """Log a specific finding"""
@@ -82,9 +82,7 @@ def setup_logger(name: str = "osint_tool", log_dir: str = "logs") -> logging.Log
 
     # File handler (detailed logs)
     timestamp = datetime.now().strftime("%Y%m%d")
-    file_handler = logging.FileHandler(
-        f"{log_dir}/osint_{timestamp}.log", encoding="utf-8"
-    )
+    file_handler = logging.FileHandler(f"{log_dir}/osint_{timestamp}.log", encoding="utf-8")
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(detailed_formatter)
 

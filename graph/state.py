@@ -1,10 +1,12 @@
 """State for LangGraph OSINT workflow"""
-from typing import TypedDict, Annotated, Optional
+
 import operator
+from typing import Annotated, Optional, TypedDict
 
 
 class OSINTState(TypedDict):
     """Investigation state"""
+
     target: str
     config: Optional[dict]  # Configuration including advanced analysis flags
     google_data: Annotated[list, operator.add]

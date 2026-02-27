@@ -60,3 +60,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+tests/ui/*.png
+
+# Claude Code local settings (machine-specific, not project config)
+.claude/settings.local.json

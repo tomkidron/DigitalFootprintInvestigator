@@ -1,32 +1,19 @@
 """Analysis node for LangGraph workflow"""
-import os
-from datetime import datetime
-from langchain_anthropic import ChatAnthropic
-from langchain_openai import ChatOpenAI
 
-
-def get_llm():
-    """Get configured LLM"""
-    provider = os.getenv("LLM_PROVIDER", "anthropic")
-    model = os.getenv("LLM_MODEL", "claude-sonnet-4-5")
-    
-    if provider == "anthropic":
-        return ChatAnthropic(model=model, temperature=0)
-    else:
-        return ChatOpenAI(model=model, temperature=0)
+from graph.nodes._timing import log_done, log_start
+from utils.llm import get_llm
 
 
 def analysis_node(state):
     """Analyze collected data and extract patterns"""
-    start = datetime.now()
-    current_date = start.strftime('%Y-%m-%d')
-    print(f"\n[{start.strftime('%H:%M:%S')}] 📊 Analysis started...")
+    start = log_start("Analysis")
+    current_date = start.strftime("%Y-%m-%d")
     target = state["target"]
     google_data = "\n".join(state.get("google_data", []))
     social_data = "\n".join(state.get("social_data", []))
-    
+
     llm = get_llm()
-    
+
     prompt = f"""Analyze and correlate all gathered intelligence on: {target}
 
 IMPORTANT: Today's date is {current_date}. Use this to validate any dates found in the data. Flag dates that are in the future as potential errors.
@@ -64,8 +51,6 @@ Provide an analytical report containing:
 - Recommendations for additional investigation"""
 
     response = llm.invoke(prompt)
-    end = datetime.now()
-    duration = (end - start).total_seconds()
-    print(f"[{end.strftime('%H:%M:%S')}] ✓ Analysis complete ({duration:.1f}s)")
-    
+    log_done("Analysis", start)
+
     return {"analysis": response.content}

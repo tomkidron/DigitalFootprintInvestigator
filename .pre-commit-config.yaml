@@ -1,0 +1,26 @@
+repos:
+  # Block accidental secret commits
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: venv/|\.git/|reports/|\.pytest_cache/
+
+  # Lint and format Python
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.4
+    hooks:
+      - id: ruff
+        args: ['--fix']
+      - id: ruff-format
+
+  # Catch common issues before they land
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict   # no unresolved merge markers
+      - id: check-added-large-files # warn on files > 500 KB
+        args: ['--maxkb=500']
+      - id: end-of-file-fixer      # ensure files end with a newline
+      - id: trailing-whitespace    # strip trailing whitespace

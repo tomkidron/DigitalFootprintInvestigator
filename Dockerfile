@@ -63,10 +63,9 @@ USER appuser
 # Expose Streamlit port
 EXPOSE 8501
 
-# Healthcheck to ensure container is ready
-# Use --fail to return non-zero exit code if HTTP status is error
-# Increase interval to avoid spamming the logs/server
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Healthcheck to ensure container is ready.
+# start-period gives Streamlit time to boot before retries count against health.
+HEALTHCHECK --interval=15s --timeout=10s --start-period=30s --retries=5 \
     CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
 # Set default command to run Streamlit

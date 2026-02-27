@@ -39,3 +39,13 @@ reports/
 .env.local
 .env.development
 .env.test
+# Claude Code and editor config (not needed in container)
+.claude/
+.mcp.json
+.devcontainer/
+
+# Test screenshot artifacts
+tests/ui/*.png
+
+# Node (safety catch)
+node_modules/

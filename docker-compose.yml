@@ -12,7 +12,7 @@ services:
       - .:/app
       - ./reports:/app/reports
       - ./logs:/app/logs
-      # Anonymous volumes prevent Docker-generated dirs from leaking to host
+      # Anonymous volumes prevent host-side dirs from shadowing container state
       - /app/.venv
       - /app/venv
       - /app/__pycache__
@@ -26,14 +26,33 @@ services:
     restart: unless-stopped
     shm_size: 2gb
 
+  # Unit tests -- no running app required; execute with:
+  #   docker compose run --rm unit-tests
+  unit-tests:
+    build: .
+    container_name: osint-unit-tests
+    volumes:
+      - .:/app
+      - /app/.venv
+      - /app/venv
+      - /app/__pycache__
+      - /app/.pytest_cache
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=.
+    command: ["pytest", "tests/unit/", "-v", "--tb=short"]
+
+  # UI (Playwright) tests -- waits for the app to pass its health check; execute with:
+  #   docker compose run --rm tests
   tests:
     build: .
-    container_name: osint-tests
+    container_name: osint-ui-tests
     volumes:
       - .:/app
       - ./reports:/app/reports
       - ./logs:/app/logs
-      # Anonymous volumes prevent Docker-generated dirs from leaking to host
+      # Anonymous volumes prevent host-side dirs from shadowing container state
       - /app/.venv
       - /app/venv
       - /app/__pycache__
@@ -43,7 +62,8 @@ services:
     environment:
       - PYTHONPATH=.
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-    command: [ "pytest", "tests/ui" ]
+    command: ["pytest", "tests/ui/", "-m", "not integration", "-v", "--tb=short"]
     depends_on:
-      - osint-tool
+      osint-tool:
+        condition: service_healthy
     shm_size: 2gb
