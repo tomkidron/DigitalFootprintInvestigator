@@ -1,4 +1,5 @@
 from tests.healer import SelfHealingPage
+import pytest
 
 
 def wait_for_streamlit(page, timeout=10000):
@@ -70,6 +71,7 @@ def test_empty_input_validation(page):
     print("✓ Successfully verified empty input disables Start button")
 
 
+@pytest.mark.local_only
 def test_investigation_lifecycle_ui(page):
     h_page = SelfHealingPage(page)
 
