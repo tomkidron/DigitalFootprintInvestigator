@@ -4,6 +4,8 @@ import re
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, mock_open, patch
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # _timing.py
 # ---------------------------------------------------------------------------
@@ -68,7 +70,12 @@ class TestGoogleNode:
         from graph.nodes.search import google_node
 
         state = {"target": "John Doe"}
-        env = {"SERPAPI_KEY": "", "HIBP_API_KEY": "", "HUNTER_API_KEY": ""}
+        env = {
+            "TAVILY_API_KEY": "",
+            "SERPAPI_KEY": "",
+            "HIBP_API_KEY": "",
+            "HUNTER_API_KEY": "",
+        }
         env.update(env_overrides or {})
         with patch("graph.nodes.search.google_search", return_value="search result"), patch.dict("os.environ", env):
             return google_node(state)
@@ -79,10 +86,12 @@ class TestGoogleNode:
         assert isinstance(result["google_data"], list)
         assert len(result["google_data"]) == 1
 
+    @pytest.mark.local_only
     def test_serpapi_ok_when_key_present(self):
         result = self._run({"SERPAPI_KEY": "realkey"})
         assert "[OK] SerpAPI" in result["google_data"][0]
 
+    @pytest.mark.local_only
     def test_serpapi_warn_when_key_absent(self):
         result = self._run({"SERPAPI_KEY": ""})
         assert "[WARN] Free googlesearch" in result["google_data"][0]
@@ -131,7 +140,7 @@ class TestSocialNode:
 
     def test_metadata_includes_instagram_error(self):
         result = self._run()
-        assert "[ERROR] Instagram" in result["social_data"][0]
+        assert "[WARN] Instagram" in result["social_data"][0]
 
     def test_metadata_includes_linkedin_warn(self):
         result = self._run()

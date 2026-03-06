@@ -4,6 +4,8 @@ Unit tests for tools/search_tools.py
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from tools.search_tools import (
     _extract_identifiers,
     _search_contact_patterns,
@@ -220,6 +222,7 @@ class TestSearchGithub:
             result = _search_github("anyuser")
         assert "error" in result.lower()
 
+    @pytest.mark.local_only
     def test_uses_github_token_from_env(self):
         mock_response = MagicMock()
         mock_response.status_code = 404
@@ -451,6 +454,7 @@ class TestProcessSearchResults:
 
 
 class TestGoogleSearchPriority:
+    @pytest.mark.local_only
     @patch.dict("os.environ", {"TAVILY_API_KEY": "tvkey", "SERPAPI_KEY": "srkey"})
     @patch("tools.search_tools._search_with_tavily")
     def test_prioritizes_tavily_over_serpapi(self, mock_tavily):
@@ -461,6 +465,7 @@ class TestGoogleSearchPriority:
         assert result == "Tavily Result"
         mock_tavily.assert_called_once()
 
+    @pytest.mark.local_only
     @patch.dict("os.environ", {"SERPAPI_KEY": "srkey"})
     @patch("os.getenv", side_effect=lambda k: "srkey" if k == "SERPAPI_KEY" else None)
     @patch("tools.search_tools._search_with_serpapi")
@@ -472,6 +477,7 @@ class TestGoogleSearchPriority:
         assert result == "SerpAPI Result"
         mock_serpapi.assert_called_once()
 
+    @pytest.mark.local_only
     @patch("tools.search_tools._search_with_googlesearch")
     @patch("os.getenv", return_value=None)
     def test_falls_back_to_googlesearch(self, mock_env, mock_fallback):

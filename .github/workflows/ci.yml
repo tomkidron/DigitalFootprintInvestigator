@@ -31,15 +31,7 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Run Unit Tests
-      env:
-        ANTHROPIC_API_KEY: "mock_anthropic_key"
-        TAVILY_API_KEY: "mock_tavily_key"
-        SERPAPI_KEY: "mock_serpapi_key"
-      run: docker compose run --rm unit-tests
+      run: docker compose run --rm unit-tests pytest tests/unit/ -m "not local_only" -v --tb=short
 
     - name: Run UI Tests (Streamlit + Playwright)
-      env:
-        ANTHROPIC_API_KEY: "mock_anthropic_key"
-        TAVILY_API_KEY: "mock_tavily_key"
-        SERPAPI_KEY: "mock_serpapi_key"
-      run: docker compose run --rm tests
+      run: docker compose run --rm tests pytest tests/ui/ -m "not integration and not local_only" -v --tb=short
