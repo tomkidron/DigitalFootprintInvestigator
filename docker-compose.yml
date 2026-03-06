@@ -18,9 +18,15 @@ services:
       - /app/__pycache__
       - /app/.pytest_cache
 
-    # Load environment variables from .env file
-    env_file:
-      - .env
+    # Pass-through environment variables from the host
+    # (Local .env is automatically loaded by Compose if present)
+    environment:
+      - ANTHROPIC_API_KEY
+      - TAVILY_API_KEY
+      - SERPAPI_KEY
+      - GITHUB_TOKEN
+      - YOUTUBE_API_KEY
+      - PYTHONPATH=.
 
     # Restart policy
     restart: unless-stopped
@@ -37,10 +43,11 @@ services:
       - /app/venv
       - /app/__pycache__
       - /app/.pytest_cache
-    env_file:
-      - .env
     environment:
       - PYTHONPATH=.
+      - ANTHROPIC_API_KEY
+      - TAVILY_API_KEY
+      - SERPAPI_KEY
     command: ["pytest", "tests/unit/", "-v", "--tb=short"]
 
   # UI (Playwright) tests -- waits for the app to pass its health check; execute with:
@@ -57,11 +64,12 @@ services:
       - /app/venv
       - /app/__pycache__
       - /app/.pytest_cache
-    env_file:
-      - .env
     environment:
       - PYTHONPATH=.
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - ANTHROPIC_API_KEY
+      - TAVILY_API_KEY
+      - SERPAPI_KEY
     command: ["pytest", "tests/ui/", "-m", "not integration", "-v", "--tb=short"]
     depends_on:
       osint-tool:

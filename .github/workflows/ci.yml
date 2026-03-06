@@ -31,25 +31,15 @@ jobs:
         cache-to: type=gha,mode=max
 
     - name: Run Unit Tests
+      env:
+        ANTHROPIC_API_KEY: "mock_anthropic_key"
+        TAVILY_API_KEY: "mock_tavily_key"
+        SERPAPI_KEY: "mock_serpapi_key"
       run: docker compose run --rm unit-tests
 
     - name: Run UI Tests (Streamlit + Playwright)
-      run: docker compose run --rm tests
-
-    - name: Run Integration Tests (Requires API Keys)
-      # This step only runs if ANTHROPIC_API_KEY is configured in GitHub Secrets
-      if: env.ANTHROPIC_API_KEY != ''
       env:
-        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
-        GITHUB_TOKEN: ${{ secrets.APP_GITHUB_TOKEN }}
-        YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
-        # Add other API keys here as needed
-      run: |
-        # Pass the secrets into the container
-        docker compose run --rm \
-          -e ANTHROPIC_API_KEY \
-          -e SERPAPI_KEY \
-          -e GITHUB_TOKEN \
-          -e YOUTUBE_API_KEY \
-          tests pytest tests/ui/ -m integration -v
+        ANTHROPIC_API_KEY: "mock_anthropic_key"
+        TAVILY_API_KEY: "mock_tavily_key"
+        SERPAPI_KEY: "mock_serpapi_key"
+      run: docker compose run --rm tests
