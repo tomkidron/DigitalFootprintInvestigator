@@ -1,6 +1,18 @@
 from tests.healer import SelfHealingPage
 
 
+def wait_for_streamlit(page, timeout=10000):
+    """Wait for Streamlit to finish its 'running' state."""
+    # Streamlit displays a spinner at the top right when running
+    # We can check for the presence of the 'running' status in the DOM.
+    # A more robust way is waiting for the progress bar to disappear.
+    try:
+        page.wait_for_selector("[data-testid='stStatusWidget']", state="hidden", timeout=timeout)
+    except Exception:
+        # Fallback to a small timeout if the selector logic is tricky
+        page.wait_for_timeout(1000)
+
+
 def test_app_loads(page):
     # Wait for Streamlit to update the title
     page.wait_for_function("document.title.includes('Digital Footprint')", timeout=10000)
@@ -18,6 +30,7 @@ def test_app_loads(page):
 
 def test_investigation_input(page):
     h_page = SelfHealingPage(page)
+    wait_for_streamlit(page)
 
     # Fill target input
     # Note: Streamlit generates dynamic IDs, so we use description-based healing
@@ -51,21 +64,10 @@ def test_empty_input_validation(page):
     # Ensure input is empty
     h_page.fill("input[aria-label='Target Identifier']", "", "Empty Target Identifier")
 
-    # Click start
-    h_page.click("button:has-text('Start Investigation')", "Start Button")
-
-    # Wait for error message - using a more resilient text-based search
-    try:
-        # Streamlit alerts often have 'stNotification' or 'stAlert'
-        error_locator = page.get_by_text("Please enter a valid target")
-        error_locator.wait_for(state="visible", timeout=8000)
-        assert error_locator.is_visible()
-        print("✓ Successfully verified empty input validation")
-    except Exception as e:
-        print(f"Failed to find error message: {e}")
-        # Take a screenshot for debugging
-        page.screenshot(path="tests/ui/error_failure.png")
-        raise e
+    # Start button should be disabled
+    start_btn = h_page.find_element("button:has-text('Start Investigation')", "Start Button")
+    assert start_btn.is_disabled(), "Start button should be disabled when input is empty"
+    print("✓ Successfully verified empty input disables Start button")
 
 
 def test_investigation_lifecycle_ui(page):
@@ -117,20 +119,14 @@ def test_sidebar_info_text(page):
 
 
 def test_whitespace_only_input(page):
-    """Input containing only spaces should trigger the same validation error as empty input."""
+    """Input containing only spaces should also disable the Start button."""
     h_page = SelfHealingPage(page)
 
     h_page.fill("input[aria-label='Target Identifier']", "   ", "Target Identifier Input")
-    h_page.click("button:has-text('Start Investigation')", "Start Button")
 
-    try:
-        error = page.get_by_text("Please enter a valid target", exact=False)
-        error.wait_for(state="visible", timeout=8000)
-        assert error.is_visible()
-        print("✓ Whitespace-only input correctly rejected")
-    except Exception as e:
-        page.screenshot(path="tests/ui/whitespace_validation_failure.png")
-        raise e
+    start_btn = h_page.find_element("button:has-text('Start Investigation')", "Start Button")
+    assert start_btn.is_disabled(), "Start button should be disabled for whitespace-only input"
+    print("✓ Whitespace-only input correctly disables button")
 
 
 def test_toggle_state_changes(page):
@@ -147,7 +143,7 @@ def test_toggle_state_changes(page):
 
         before = toggle_input.get_attribute("aria-checked")
         toggle_label.click()  # click label to toggle the checkbox state
-        page.wait_for_timeout(500)  # allow Streamlit to re-render
+        wait_for_streamlit(page)
         after = toggle_input.get_attribute("aria-checked")
 
         assert before != after, f"Toggle '{label}' state did not change (stuck at '{before}')"
@@ -160,24 +156,25 @@ def test_report_section_absent_on_initial_load(page):
     page.wait_for_function("document.title.includes('Digital Footprint')", timeout=10000)
     page.wait_for_timeout(1000)  # let Streamlit finish initial render
 
-    # Neither element should be visible
-    report_heading = page.locator("text=Investigation Report")
-    download_btn = page.locator("text=Download Report")
+    # Neither element should be visible in the main investigation area
+    # Note: We use a more specific selector to avoid matching content in the 'Reports' tab
+    report_heading = page.locator("[data-testid='stMain'] h3:has-text('Investigation Report')")
+    download_btn = page.locator("[data-testid='stMain'] button:has-text('Download Report')")
 
     assert not report_heading.is_visible(), "Report heading should not be visible on initial load"
     assert not download_btn.is_visible(), "Download button should not be visible on initial load"
     print("[OK] Report section is correctly absent before any investigation")
 
 
-def test_start_button_enabled_on_load(page):
-    """The 'Start Investigation' button must be present and enabled on initial
-    page load (not in the disabled 'in progress' state)."""
+def test_start_button_disabled_on_load(page):
+    """The 'Start Investigation' button must be present but disabled on initial
+    page load because the target identifier is empty."""
     start_btn = page.locator("button:has-text('Start Investigation')")
     start_btn.wait_for(state="visible", timeout=8000)
 
     assert start_btn.is_visible()
-    assert not start_btn.is_disabled(), "Start button should be enabled on initial load"
-    print("[OK] Start Investigation button is enabled on initial load")
+    assert start_btn.is_disabled(), "Start button should be disabled on initial load (empty input)"
+    print("[OK] Start Investigation button is correctly disabled on initial load")
 
 
 def test_config_header_visible(page):
