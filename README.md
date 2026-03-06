@@ -7,9 +7,9 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 ## Features
 
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
-- **Platform coverage**: Google (SerpAPI or free fallback), GitHub, Reddit, Twitter/X, YouTube, LinkedIn, Instagram (limited), Facebook (limited)
+- **Platform coverage**: Google (SerpAPI or free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery
-- **Streamlit web UI**: interactive interface with real-time log streaming and report download
+- **Streamlit web UI**: interactive interface with dual tabs (Investigate / Reports) for real-time log streaming and viewing saved reports inline
 - **CLI mode**: scriptable via `python main.py`
 - **Advanced analysis** (optional): timeline correlation, network analysis, deep content analysis
 - **Docker-first**: a single image runs the app, unit tests, and UI tests
@@ -56,15 +56,6 @@ streamlit run app.py
 # Or use the CLI
 python main.py "John Doe"
 ```
-
----
-
-### Option 3: VS Code DevContainer
-
-1. Open the project in VS Code
-2. Press **F1** → *Dev Containers: Reopen in Container*
-3. Wait for the container to build (~5 minutes first time)
-4. Set breakpoints and press **F5** to debug with full IDE support
 
 ---
 

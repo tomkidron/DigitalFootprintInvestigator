@@ -201,9 +201,14 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None) -> str
             hunter_result = search_hunter_emails(domain, target_name)
             output += f"\nHunter.io - {domain}:\n{hunter_result}"
 
-    # Method 2: Generate common email patterns
+    # Method 2: Generate common email patterns (ONLY IF HIBP IS CONFIGURED)
+    hibp_key = os.getenv("HIBP_API_KEY")
     name_parts = target_name.lower().split()
-    if len(name_parts) >= 2:
+
+    if not hibp_key:
+        output += "\n[SKIP] Common Email Pattern Generation disabled.\n"
+        output += "Reason: HIBP_API_KEY is not configured. Generating patterns without breach verification produces unreliable data.\n"
+    elif len(name_parts) >= 2:
         first, last = name_parts[0], name_parts[-1]
 
         patterns = [
@@ -223,7 +228,7 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None) -> str
                 discovered_emails.append(email)
 
     # Method 3: Check discovered emails against HIBP
-    if discovered_emails:
+    if discovered_emails and hibp_key:
         output += "\nBreach Check Results:\n"
         for email in discovered_emails[:5]:
             hibp_result = search_hibp_breaches(email)

@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import time
+from pathlib import Path
 
 import streamlit as st
 import yaml
@@ -60,6 +61,50 @@ def load_config():
         }
 
 
+def get_saved_reports() -> list[Path]:
+    """Return all saved report .md files sorted newest-first."""
+    reports_dir = Path("reports")
+    if not reports_dir.exists():
+        return []
+    files = sorted(reports_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+    return files
+
+
+def render_reports_page():
+    """Render the saved reports browser page."""
+    st.title("📂 Saved Reports")
+    st.markdown("Browse and open previously generated investigation reports.")
+
+    report_files = get_saved_reports()
+
+    if not report_files:
+        st.info("No reports found in the `reports/` folder yet. Run an investigation to generate one.")
+        return
+
+    # Let the user pick a report
+    report_names = [p.name for p in report_files]
+    selected_name = st.selectbox(
+        "Select a report",
+        options=report_names,
+        index=0,
+        help="Reports are sorted newest-first.",
+    )
+
+    selected_path = Path("reports") / selected_name
+    with open(selected_path, "r", encoding="utf-8") as fh:
+        content = fh.read()
+
+    st.divider()
+    st.markdown(content)
+    st.divider()
+    st.download_button(
+        label="⬇️ Download Report",
+        data=content,
+        file_name=selected_name,
+        mime="text/markdown",
+    )
+
+
 def main():
     if not os.getenv("ANTHROPIC_API_KEY"):
         st.warning("No Anthropic API key found in .env file. Please configure your API keys.")
@@ -114,123 +159,127 @@ def main():
         st.divider()
         st.info("Ensure you have set up your API keys in .env for full functionality.")
 
-    # Main Content
-    st.title("Digital Footprint Investigator")
-    st.markdown("""
-    > **EDUCATIONAL USE ONLY**: This tool is designed for educational purposes, security research, and legitimate OSINT investigations.
-    > Users must comply with all applicable laws and ethical guidelines.
-    """)
+    # Main Content — tabs
+    tab_investigate, tab_reports = st.tabs(["🔍 Investigate", "📂 Reports"])
 
-    # Input Section
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.text_input(
-            "Target Identifier", placeholder="Enter Name, Email, Username, or Phone Number...", key="target_input"
-        )
+    with tab_reports:
+        render_reports_page()
 
-    with col2:
-        st.write("")
-        st.write("")
+    with tab_investigate:
+        st.title("Digital Footprint Investigator")
+        st.markdown("""
+        > **EDUCATIONAL USE ONLY**: This tool is designed for educational purposes, security research, and legitimate OSINT investigations.
+        > Users must comply with all applicable laws and ethical guidelines.
+        """)
 
-        if st.session_state.processing:
-            st.button("Investigation in progress...", disabled=True, use_container_width=True, key="processing_btn")
-        else:
-            st.button(
-                "Start Investigation",
-                type="primary",
-                use_container_width=True,
-                on_click=start_investigation,
-                key="start_btn",
+        # Input Section
+        col1, col2 = st.columns([3, 1], vertical_alignment="bottom")
+        with col1:
+            target_val = st.text_input(
+                "Target Identifier", placeholder="Enter Name, Email, Username, or Phone Number...", key="target_input"
             )
 
-    # Processing Logic
-    if st.session_state.processing:
-        target_val = st.session_state.target_input
+        with col2:
+            is_disabled = not target_val or not target_val.strip()
 
-        if not target_val or not target_val.strip():
-            st.error("Please enter a valid target.")
-            st.session_state.processing = False
-            time.sleep(1)
-            st.rerun()
-        else:
-            status_container = st.empty()
-            logs_expander = st.expander("Investigation Logs", expanded=True)
-            log_placeholder = logs_expander.empty()
-
-            st_handler = StreamlitLogHandler(log_placeholder)
-            root_logger = logging.getLogger()
-            root_logger.addHandler(st_handler)
-            root_logger.setLevel(logging.INFO)
-
-            try:
-                with st.spinner(f"Investigating '{target_val}'..."):
-                    status_container.info("Initializing workflow agents...")
-                    app = create_workflow()
-
-                    inputs = {"target": target_val, "config": config}
-                    thread_config = {"configurable": {"thread_id": f"web_{int(time.time())}"}}
-
-                    status_container.info("Running searches and analysis... (Parallel Execution)")
-
-                    result = app.invoke(inputs, thread_config)
-
-                    status_container.success("Investigation Complete!")
-
-                    report_content = None
-                    latest_file = None
-
-                    # 1. Exact Name Match
-                    normalized_target = target_val.replace(" ", "_")
-                    search_pattern = f"reports/*{normalized_target}*.md"
-                    list_of_files = glob.glob(search_pattern)
-
-                    # 2. Fallback: Recent files
-                    if not list_of_files:
-                        all_reports = glob.glob("reports/*.md")
-                        if all_reports:
-                            newest_file = max(all_reports, key=os.path.getmtime)
-                            if time.time() - os.path.getmtime(newest_file) < 120:
-                                list_of_files = [newest_file]
-
-                    if list_of_files:
-                        latest_file = max(list_of_files, key=os.path.getctime)
-                        with open(latest_file, "r", encoding="utf-8") as f:
-                            report_content = f.read()
-                    elif "messages" in result and result["messages"]:
-                        report_content = result["messages"][-1].content
-                    else:
-                        report_content = "### Report Not Found\nCould not locate the generated report file or message content. Please check the logs."
-
-                    st.session_state.report_content = report_content
-                    st.session_state.latest_report_file = latest_file
-
-            except Exception:
-                import traceback
-
-                error_details = traceback.format_exc()
-                st.session_state.report_content = (
-                    f"### Error\nAn error occurred during investigation:\n\n```\n{error_details}\n```"
+            if st.session_state.processing:
+                st.button("Investigation in progress...", disabled=True, use_container_width=True, key="processing_btn")
+            else:
+                st.button(
+                    "Start Investigation",
+                    type="primary",
+                    use_container_width=True,
+                    disabled=is_disabled,
+                    on_click=start_investigation,
+                    key="start_btn",
                 )
-                st.error("An error occurred. Check the report section for details.")
-            finally:
-                root_logger.removeHandler(st_handler)
-                st.session_state.processing = False
-                st.rerun()
 
-    # Result Display (Persistent)
-    if st.session_state.report_content:
-        st.divider()
-        st.subheader("Investigation Report")
-        st.markdown(st.session_state.report_content)
+        # Processing Logic
+        if st.session_state.processing:
+            target_val = st.session_state.target_input
 
-        if st.session_state.latest_report_file:
-            file_name_dl = os.path.basename(st.session_state.latest_report_file)
-        else:
-            file_name_dl = "report.md"
+            if target_val and target_val.strip():
+                status_container = st.empty()
+                logs_expander = st.expander("Investigation Logs", expanded=True)
+                log_placeholder = logs_expander.empty()
 
-        st.download_button(
-            label="Download Report", data=st.session_state.report_content, file_name=file_name_dl, mime="text/markdown"
-        )
+                st_handler = StreamlitLogHandler(log_placeholder)
+                root_logger = logging.getLogger()
+                root_logger.addHandler(st_handler)
+                root_logger.setLevel(logging.INFO)
+
+                try:
+                    with st.spinner(f"Investigating '{target_val}'..."):
+                        status_container.info("Initializing workflow agents...")
+                        app = create_workflow()
+
+                        inputs = {"target": target_val, "config": config}
+                        thread_config = {"configurable": {"thread_id": f"web_{int(time.time())}"}}
+
+                        status_container.info("Running searches and analysis... (Parallel Execution)")
+
+                        result = app.invoke(inputs, thread_config)
+
+                        status_container.success("Investigation Complete!")
+
+                        report_content = None
+                        latest_file = None
+
+                        # 1. Exact Name Match
+                        normalized_target = target_val.replace(" ", "_")
+                        search_pattern = f"reports/*{normalized_target}*.md"
+                        list_of_files = glob.glob(search_pattern)
+
+                        # 2. Fallback: Recent files
+                        if not list_of_files:
+                            all_reports = glob.glob("reports/*.md")
+                            if all_reports:
+                                newest_file = max(all_reports, key=os.path.getmtime)
+                                if time.time() - os.path.getmtime(newest_file) < 120:
+                                    list_of_files = [newest_file]
+
+                        if list_of_files:
+                            latest_file = max(list_of_files, key=os.path.getctime)
+                            with open(latest_file, "r", encoding="utf-8") as f:
+                                report_content = f.read()
+                        elif "messages" in result and result["messages"]:
+                            report_content = result["messages"][-1].content
+                        else:
+                            report_content = "### Report Not Found\nCould not locate the generated report file or message content. Please check the logs."
+
+                        st.session_state.report_content = report_content
+                        st.session_state.latest_report_file = latest_file
+
+                except Exception:
+                    import traceback
+
+                    error_details = traceback.format_exc()
+                    st.session_state.report_content = (
+                        f"### Error\nAn error occurred during investigation:\n\n```\n{error_details}\n```"
+                    )
+                    st.error("An error occurred. Check the report section for details.")
+                finally:
+                    root_logger.removeHandler(st_handler)
+                    st.session_state.processing = False
+                    st.rerun()
+
+        # Result Display (Persistent)
+        if st.session_state.report_content:
+            st.divider()
+            st.subheader("Investigation Report")
+            st.markdown(st.session_state.report_content)
+
+            if st.session_state.latest_report_file:
+                file_name_dl = os.path.basename(st.session_state.latest_report_file)
+            else:
+                file_name_dl = "report.md"
+
+            st.download_button(
+                label="Download Report",
+                data=st.session_state.report_content,
+                file_name=file_name_dl,
+                mime="text/markdown",
+            )
 
 
 if __name__ == "__main__":

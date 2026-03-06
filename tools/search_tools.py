@@ -244,9 +244,10 @@ def _search_platform(platform: str, target: str) -> str:
     elif platform == "youtube":
         output += _search_youtube(target)
     elif platform in ["instagram", "facebook", "soundcloud"]:
-        output += f"[ERROR] {platform.upper()}: Not implemented\n"
-        output += f"Manual search required: Search '{target}' on {platform}.com\n"
-        output += f"Note: {platform.title()} API requires special access/approval\n"
+        output += f"[WARN] {platform.upper()}: Direct API not accessable. Using Google dork fallback.\n\n"
+        query = f'site:{platform}.com "{target}"'
+        output += f"Search query: {query}\n\n"
+        output += google_search(query)
     else:
         output += f"[ERROR] Platform {platform} not yet implemented\n"
 
@@ -278,11 +279,11 @@ def _search_twitter(target: str) -> str:
     username = target.replace(" ", "").lower()
     result = search_twitter_timeline(username)
 
-    if "not configured" in result or "not found" in result:
-        result += "\nManual search recommendations:\n"
-        result += f"1. Search: @{username}\n"
-        result += f'2. Search: "{target}" on twitter.com\n'
-        result += f'3. Google: site:twitter.com "{target}"\n'
+    if "error" in result.lower() or "not configured" in result.lower() or "not found" in result.lower():
+        result += "\n[WARN] Twitter API failed or returned no results. Falling back to Google dork:\n\n"
+        query = f'site:twitter.com OR site:x.com "{target}"'
+        result += f"Search query: {query}\n\n"
+        result += google_search(query)
 
     return result
 

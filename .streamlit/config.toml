@@ -9,3 +9,8 @@ fileWatcherType = "none"
 
 [browser]
 gatherUsageStats = false
+
+[theme]
+base = "dark"
+# The primary color represents the "Start Investigation" primary button background
+primaryColor = "#00c853"
