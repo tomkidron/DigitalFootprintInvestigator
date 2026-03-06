@@ -1,6 +1,8 @@
 from tests.healer import SelfHealingPage
+import pytest
 
 
+@pytest.mark.local_only
 def test_ai_healing_flow(page):
     h_page = SelfHealingPage(page)
 
