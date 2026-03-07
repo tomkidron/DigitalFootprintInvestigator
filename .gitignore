@@ -60,6 +60,10 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Cache directory
+.cache/
+
 # Test artifacts
 .pytest_cache/
 .coverage

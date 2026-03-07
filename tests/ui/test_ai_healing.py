@@ -1,5 +1,6 @@
-from tests.healer import SelfHealingPage
 import pytest
+
+from tests.healer import SelfHealingPage
 
 
 @pytest.mark.local_only

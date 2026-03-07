@@ -1,5 +1,6 @@
-from tests.healer import SelfHealingPage
 import pytest
+
+from tests.healer import SelfHealingPage
 
 
 def wait_for_streamlit(page, timeout=10000):
@@ -75,11 +76,22 @@ def test_empty_input_validation(page):
 def test_investigation_lifecycle_ui(page):
     h_page = SelfHealingPage(page)
 
-    # Fill target
-    h_page.fill("input[aria-label='Target Identifier']", "Test User", "Target Identifier")
+    # Fill target and trigger input event
+    input_field = page.locator("input[aria-label='Target Identifier']")
+    input_field.fill("Test User")
+    input_field.press("Tab")  # Trigger blur event to ensure Streamlit detects the change
+
+    # Wait for button to become enabled
+    start_btn = page.locator("button:has-text('Start Investigation')")
+    for _ in range(10):
+        if not start_btn.is_disabled():
+            break
+        page.wait_for_timeout(500)
+    else:
+        raise AssertionError("Button did not become enabled after filling input")
 
     # Click start
-    h_page.click("button:has-text('Start Investigation')", "Start Button")
+    start_btn.click()
 
     # Verify processing button appears (it might happen fast)
     # The button text changes to "⏳ Investigation in progress..."
@@ -136,19 +148,22 @@ def test_toggle_state_changes(page):
     toggle_labels = ["Timeline Correlation", "Network Analysis", "Deep Content Analysis"]
 
     for label in toggle_labels:
-        # The label element wraps both the toggle text and its <input>.
-        # Confirmed working: label:has-text() is what the existing sidebar_toggles
-        # test uses successfully.
         toggle_label = page.locator(f"label:has-text('{label}')")
         toggle_label.wait_for(state="attached", timeout=5000)
         toggle_input = toggle_label.locator("input")
 
         before = toggle_input.get_attribute("aria-checked")
-        toggle_label.click()  # click label to toggle the checkbox state
-        wait_for_streamlit(page)
-        after = toggle_input.get_attribute("aria-checked")
+        toggle_label.click()
 
-        assert before != after, f"Toggle '{label}' state did not change (stuck at '{before}')"
+        # Poll for state change
+        for _ in range(10):
+            after = toggle_input.get_attribute("aria-checked")
+            if after != before:
+                break
+            page.wait_for_timeout(300)
+        else:
+            raise AssertionError(f"Toggle '{label}' state did not change (stuck at '{before}')")
+
         print(f"[OK] Toggle '{label}': {before} -> {after}")
 
 

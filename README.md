@@ -9,6 +9,8 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
 - **Platform coverage**: Google (SerpAPI or free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery
+- **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
+- **Input validation**: Sanitization and validation of all user inputs
 - **Streamlit web UI**: interactive interface with dual tabs (Investigate / Reports) for real-time log streaming and viewing saved reports inline
 - **CLI mode**: scriptable via `python main.py`
 - **Advanced analysis** (optional): timeline correlation, network analysis, deep content analysis
@@ -112,7 +114,11 @@ DigitalFootprintInvestigator/
 │   └── api_tools.py          # HIBP, Hunter.io, YouTube, Twitter wrappers
 ├── utils/
 │   ├── llm.py                # Shared ChatAnthropic factory
-│   └── logger.py             # Logging setup
+│   ├── logger.py             # Logging setup
+│   ├── cache.py              # Disk-based caching for API calls
+│   ├── retry.py              # Exponential backoff retry logic
+│   ├── validation.py         # Input validation and sanitization
+│   └── models.py             # Pydantic data models
 ├── tests/
 │   ├── conftest.py           # Playwright session/page fixtures
 │   ├── healer.py             # Self-healing Playwright page wrapper
@@ -254,6 +260,16 @@ Prohibited uses: stalking or harassment, unauthorized surveillance, identity the
 All searches use publicly available information only. Users are responsible for compliance with local privacy laws (GDPR, CCPA, etc.), platform Terms of Service, and the Computer Fraud and Abuse Act (CFAA).
 
 **By using this tool, you agree to use it responsibly and ethically.**
+
+## Performance & Reliability
+
+The tool includes built-in optimizations:
+
+- **Caching**: API responses cached for 1-24 hours to reduce quota usage and improve speed. Repeated searches are significantly faster.
+- **Retry logic**: Failed API calls automatically retry up to 3 times with exponential backoff for resilience against network issues.
+- **Input validation**: All inputs sanitized and validated before processing to prevent errors and improve security.
+
+Cache files are stored in `.cache/` and automatically expire based on TTL. To clear cache: `rm -rf .cache/` (Unix) or `rmdir /s .cache` (Windows).
 
 ## License
 

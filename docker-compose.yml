@@ -48,7 +48,10 @@ services:
       - ANTHROPIC_API_KEY
       - TAVILY_API_KEY
       - SERPAPI_KEY
-    command: ["pytest", "tests/unit/", "-v", "--tb=short"]
+    command: [
+      "sh", "-c",
+      "ruff check . && ruff format --check . && pytest tests/unit/ -v --tb=short"
+    ]
 
   # UI (Playwright) tests -- waits for the app to pass its health check; execute with:
   #   docker compose run --rm tests

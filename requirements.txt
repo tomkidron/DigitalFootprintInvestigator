@@ -28,3 +28,6 @@ pytest-dotenv>=0.5.2
 pre-commit>=4.0.0
 detect-secrets>=1.5.0
 ruff>=0.15.0
+
+# Utilities
+pydantic>=2.0.0
