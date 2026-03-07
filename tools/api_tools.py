@@ -9,11 +9,20 @@ from typing import List
 
 import requests
 
+from utils.cache import cached
+from utils.retry import retry
+from utils.validation import is_valid_email, sanitize_target
+
 logger = logging.getLogger("osint_tool")
 
 
+@cached(ttl=86400)  # Cache for 24 hours
+@retry(max_attempts=2, delay=1)
 def search_hibp_breaches(email: str) -> str:
     """Search Have I Been Pwned for email breaches"""
+    if not is_valid_email(email):
+        return f"[ERROR] Invalid email format: {email}\n"
+
     api_key = os.getenv("HIBP_API_KEY")
     if not api_key:
         return "[ERROR] HIBP API key not configured\n"
@@ -81,8 +90,11 @@ def search_hunter_emails(domain: str, target_name: str) -> str:
         return f"[ERROR] Hunter.io search error: {str(e)}\n"
 
 
+@cached(ttl=3600)
+@retry(max_attempts=3, delay=2)
 def search_youtube_channel(target: str) -> str:
     """Search YouTube for channels"""
+    target = sanitize_target(target)
     api_key = os.getenv("YOUTUBE_API_KEY")
     if not api_key:
         return "[ERROR] YouTube API key not configured\n"
@@ -124,8 +136,11 @@ def search_youtube_channel(target: str) -> str:
         return f"[ERROR] YouTube search error: {str(e)}\n"
 
 
+@cached(ttl=3600)
+@retry(max_attempts=3, delay=2)
 def search_twitter_timeline(username: str) -> str:
     """Search Twitter timeline using API v2"""
+    username = sanitize_target(username).replace("@", "")
     bearer_token = os.getenv("TWITTER_BEARER_TOKEN")
     if not bearer_token:
         return "[ERROR] Twitter Bearer Token not configured\n"

@@ -8,6 +8,10 @@ import re
 
 import requests
 
+from utils.cache import cached
+from utils.retry import retry
+from utils.validation import sanitize_target
+
 logger = logging.getLogger("osint_tool")
 
 
@@ -23,6 +27,7 @@ def google_search(query: str) -> str:
     Returns:
         Search results with URLs and extracted identifiers
     """
+    query = sanitize_target(query)
     logger.info(f"Google Search initiated for query: {query}")
 
     try:
@@ -329,10 +334,12 @@ def _search_twitter(target: str) -> str:
     return result
 
 
+@cached(ttl=3600)
+@retry(max_attempts=3, delay=2)
 def _search_github(target: str) -> str:
     """Search GitHub with repository analysis"""
     try:
-        username = target.replace(" ", "").lower()
+        username = sanitize_target(target).replace(" ", "")
         headers = {"User-Agent": "OSINT Tool 1.0"}
         github_token = os.getenv("GITHUB_TOKEN")
         if github_token:
@@ -392,10 +399,12 @@ def _search_github(target: str) -> str:
         return f"GitHub search error: {str(e)}\n"
 
 
+@cached(ttl=3600)
+@retry(max_attempts=3, delay=2)
 def _search_reddit(target: str) -> str:
     """Search Reddit with deep analysis"""
     try:
-        username = target.replace(" ", "").lower()
+        username = sanitize_target(target).replace(" ", "")
         headers = {"User-Agent": "OSINT Tool 1.0"}
 
         profile_url = f"https://www.reddit.com/user/{username}/about.json"
