@@ -24,3 +24,14 @@ repos:
         args: ['--maxkb=500']
       - id: end-of-file-fixer      # ensure files end with a newline
       - id: trailing-whitespace    # strip trailing whitespace
+      - id: check-case-conflict    # prevent case-sensitive filename conflicts
+
+  # Block cache and generated files
+  - repo: local
+    hooks:
+      - id: block-cache-files
+        name: Block cache and generated files
+        entry: 'bash -c "if git diff --cached --name-only | grep -E \"(\\.cache/|\\.ruff_cache/|__pycache__|/logs/.*\\.log$|/reports/.*\\.md$)\"; then echo \"ERROR: Attempting to commit cache/generated files. Add to .gitignore.\"; exit 1; fi"'
+        language: system
+        pass_filenames: false
+        always_run: true
