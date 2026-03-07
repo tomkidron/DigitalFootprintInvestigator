@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+  actions: write  # required for docker buildx GHA cache (cache-to: type=gha)
+
 jobs:
   test:
     runs-on: ubuntu-latest
