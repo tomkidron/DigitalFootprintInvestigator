@@ -203,6 +203,15 @@ class TestSearchYoutubeChannel:
         assert "No YouTube channels" in result
 
     def test_returns_channel_info_on_success(self):
+        # Clear any cached results first
+        import tools.api_tools
+
+        if hasattr(tools.api_tools.search_youtube_channel, "__wrapped__"):
+            # Bypass decorators by calling the original function
+            original_func = tools.api_tools.search_youtube_channel.__wrapped__.__wrapped__
+        else:
+            original_func = tools.api_tools.search_youtube_channel
+
         mock_youtube = MagicMock()
         mock_youtube.search().list().execute.return_value = {
             "items": [
@@ -231,7 +240,7 @@ class TestSearchYoutubeChannel:
             patch.dict("os.environ", {"YOUTUBE_API_KEY": "testkey"}),
             patch("googleapiclient.discovery.build", return_value=mock_youtube),
         ):
-            result = search_youtube_channel("testchannel")
+            result = original_func("testchannel")
 
         assert "[OK]" in result
         assert "Test Channel" in result
@@ -287,6 +296,14 @@ class TestSearchTwitterTimeline:
         assert "not found" in result
 
     def test_returns_profile_when_user_found(self):
+        # Bypass decorators
+        import tools.api_tools
+
+        if hasattr(tools.api_tools.search_twitter_timeline, "__wrapped__"):
+            original_func = tools.api_tools.search_twitter_timeline.__wrapped__.__wrapped__
+        else:
+            original_func = tools.api_tools.search_twitter_timeline
+
         mock_user_data = MagicMock()
         mock_user_data.id = "123"
         mock_user_data.username = "testuser"
@@ -311,7 +328,7 @@ class TestSearchTwitterTimeline:
             patch.dict("os.environ", {"TWITTER_BEARER_TOKEN": "testtoken"}),
             patch.dict(sys.modules, {"tweepy": mock_tweepy}),
         ):
-            result = search_twitter_timeline("testuser")
+            result = original_func("testuser")
 
         assert "[OK]" in result
         assert "testuser" in result
