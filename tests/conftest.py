@@ -10,9 +10,9 @@ from playwright.sync_api import sync_playwright
 
 @pytest.fixture(scope="session")
 def streamlit_app():
-    # If running in Docker (tests service), point to osint-tool service
+    # If running in Docker (tests service), point to app-test service
     if os.path.exists("/.dockerenv"):
-        yield "http://osint-tool:8501"
+        yield "http://app-test:8502"
     else:
         # Path to venv python
         python_path = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")

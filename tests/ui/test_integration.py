@@ -129,24 +129,21 @@ def test_report_content_has_text(page):
 
 @pytest.mark.integration
 @pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
-def test_processing_button_disabled(page):
+def test_stop_button_appears_during_investigation(page):
     """While the investigation is running the start button must be replaced by
-    the disabled '⏳ Investigation in progress...' button.
-
-    NOTE: Because Streamlit calls st.rerun() immediately after setting
-    processing=True, this window is very short. This test is best-effort and
-    may be flaky on slow machines. Consider adding a forced delay in app.py
-    behind a TEST_SLOW_MODE env var if reliable assertion is needed.
-    """
+    the active '⏹ Stop Investigation' button."""
     h_page = SelfHealingPage(page)
 
     h_page.fill("input[aria-label='Target Identifier']", "Processing Test", "Target Identifier Input")
+    consent_label = page.locator("label:has-text('I confirm I have a legitimate purpose')")
+    if not page.get_by_role("checkbox", name="I confirm I have a legitimate purpose", exact=False).is_checked():
+        consent_label.click()
     h_page.click("button:has-text('Start Investigation')", "Start Button")
 
     try:
-        processing_btn = page.locator("button:has-text('Investigation in progress')")
-        processing_btn.wait_for(state="visible", timeout=3000)
-        assert processing_btn.is_disabled()
-        print("✓ Processing button appeared and is disabled")
+        stop_btn = page.locator("button:has-text('Stop Investigation')")
+        stop_btn.wait_for(state="visible", timeout=5000)
+        assert not stop_btn.is_disabled()
+        print("✓ Stop Investigation button appeared and is enabled")
     except Exception:
-        pytest.skip("Processing button window too short to catch reliably on this machine")
+        pytest.skip("Stop button window too short to catch reliably on this machine")

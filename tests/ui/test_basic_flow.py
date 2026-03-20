@@ -101,11 +101,10 @@ def test_investigation_lifecycle_ui(page):
     # Click start
     start_btn.click()
 
-    # Verify processing button appears (it might happen fast)
-    # The button text changes to "⏳ Investigation in progress..."
-    processing_btn = h_page.find_element("button:has-text('Investigation in progress')", "Processing Button")
-    assert processing_btn is not None
-    assert processing_btn.is_disabled()
+    # Verify stop button appears (replaces start button while running)
+    stop_btn = h_page.find_element("button:has-text('Stop Investigation')", "Stop Button")
+    assert stop_btn is not None
+    assert not stop_btn.is_disabled()
 
     # Verify Logs expander appears
     logs = h_page.find_element("div[data-testid='stExpander']:has-text('Investigation Logs')", "Logs Expander")
