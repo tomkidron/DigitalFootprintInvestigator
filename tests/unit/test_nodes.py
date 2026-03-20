@@ -510,3 +510,108 @@ class TestAdvancedAnalysisNode:
 
         result = advanced_analysis_node(self._base_state(network=True))
         assert result["network_data"]["unique_identifiers"] == 0
+
+
+# ---------------------------------------------------------------------------
+# graph/nodes/advanced.py — robustness with string items (the real-world case)
+# ---------------------------------------------------------------------------
+
+
+class TestAdvancedNodeWithStringData:
+    """The crash that prompted these tests: google_data/social_data contain strings, not dicts."""
+
+    def _state(self, timeline=False, network=False):
+        return {
+            "target": "John Doe",
+            "config": {"advanced_analysis": {"timeline_correlation": timeline, "network_analysis": network}},
+            "google_data": ["Google Search Results for: John Doe\n1. Some result\n"],
+            "social_data": ["[OK] Found GitHub profile:\n  Username: johndoe\n"],
+        }
+
+    def test_network_analysis_does_not_crash_with_string_items(self):
+        from graph.nodes.advanced import advanced_analysis_node
+
+        result = advanced_analysis_node(self._state(network=True))
+        assert result["network_data"]["unique_identifiers"] == 0
+
+    def test_timeline_analysis_does_not_crash_with_string_items(self):
+        from graph.nodes.advanced import advanced_analysis_node
+
+        result = advanced_analysis_node(self._state(timeline=True))
+        assert result["timeline_data"]["total_timestamped_items"] == 0
+
+    def test_mixed_dict_and_string_items_processes_dicts_only(self):
+        from graph.nodes.advanced import advanced_analysis_node
+
+        state = {
+            "target": "John Doe",
+            "config": {"advanced_analysis": {"network_analysis": True}},
+            "google_data": [
+                "raw string result",
+                {"username": "johndoe", "email": "john@example.com"},
+            ],
+            "social_data": [],
+        }
+        result = advanced_analysis_node(state)
+        assert result["network_data"]["unique_identifiers"] == 2
+        assert "johndoe" in result["network_data"]["identifier_list"]
+        assert "john@example.com" in result["network_data"]["identifier_list"]
+
+    def test_map_platform_connections_skips_strings(self):
+        from graph.nodes.advanced import _map_platform_connections
+
+        state = {
+            "google_data": ["raw string", {"platform": "google"}],
+            "social_data": ["another string", {"platform": "github"}],
+        }
+        result = _map_platform_connections(state)
+        assert "google" in result
+        assert "github" in result
+
+
+class TestFindCrossPlatformCorrelations:
+    def test_empty_timestamps_returns_empty(self):
+        from graph.nodes.advanced import _find_cross_platform_correlations
+
+        assert _find_cross_platform_correlations([]) == []
+
+    def test_single_platform_no_correlations(self):
+        from graph.nodes.advanced import _find_cross_platform_correlations
+
+        timestamps = [
+            {"platform": "twitter", "timestamp": "2024-01-15T10:00:00Z"},
+            {"platform": "twitter", "timestamp": "2024-01-15T11:00:00Z"},
+        ]
+        assert _find_cross_platform_correlations(timestamps) == []
+
+    def test_two_platforms_within_24h_produces_correlation(self):
+        from graph.nodes.advanced import _find_cross_platform_correlations
+
+        timestamps = [
+            {"platform": "twitter", "timestamp": "2024-01-15T10:00:00Z"},
+            {"platform": "github", "timestamp": "2024-01-15T12:00:00Z"},
+        ]
+        result = _find_cross_platform_correlations(timestamps)
+        assert len(result) == 1
+        assert result[0]["correlation_score"] == 1.0
+
+    def test_two_platforms_far_apart_no_correlation(self):
+        from graph.nodes.advanced import _find_cross_platform_correlations
+
+        timestamps = [
+            {"platform": "twitter", "timestamp": "2024-01-01T10:00:00Z"},
+            {"platform": "github", "timestamp": "2024-06-01T10:00:00Z"},
+        ]
+        result = _find_cross_platform_correlations(timestamps)
+        assert result == []
+
+    def test_result_contains_platform_names(self):
+        from graph.nodes.advanced import _find_cross_platform_correlations
+
+        timestamps = [
+            {"platform": "twitter", "timestamp": "2024-01-15T10:00:00Z"},
+            {"platform": "reddit", "timestamp": "2024-01-15T11:00:00Z"},
+        ]
+        result = _find_cross_platform_correlations(timestamps)
+        assert result[0]["platform_1"] in ("twitter", "reddit")
+        assert result[0]["platform_2"] in ("twitter", "reddit")

@@ -169,8 +169,22 @@ def main():
         st.title("Digital Footprint Investigator")
         st.markdown("""
         > **EDUCATIONAL USE ONLY**: This tool is designed for educational purposes, security research, and legitimate OSINT investigations.
-        > Users must comply with all applicable laws and ethical guidelines.
+        > Users must comply with all applicable laws and ethical guidelines. Misuse for stalking, harassment, or illegal
+        > activities is strictly prohibited. By using this tool you accept full responsibility for compliance with all
+        > applicable laws and platform Terms of Service, including Twitter/X, Reddit, and others.
         """)
+
+        # Consent gate
+        if "consent" not in st.session_state:
+            st.session_state.consent = False
+
+        consent = st.checkbox(
+            "I confirm I have a legitimate purpose (security research, due diligence, personal privacy audit, or investigative journalism) "
+            "and will comply with all applicable laws and platform Terms of Service.",
+            value=st.session_state.consent,
+            key="consent_checkbox",
+        )
+        st.session_state.consent = consent
 
         # Input Section
         col1, col2 = st.columns([3, 1], vertical_alignment="bottom")
@@ -180,7 +194,7 @@ def main():
             )
 
         with col2:
-            is_disabled = not target_val or not target_val.strip()
+            is_disabled = not target_val or not target_val.strip() or not consent
 
             if st.session_state.processing:
                 st.button("Investigation in progress...", disabled=True, use_container_width=True, key="processing_btn")

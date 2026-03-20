@@ -1,14 +1,17 @@
 """Advanced analysis node for timeline correlation and network analysis"""
 
+import logging
 from datetime import datetime
 from typing import Any, Dict, List
 
 from graph.state import OSINTState
 
+logger = logging.getLogger("osint_tool")
+
 
 def advanced_analysis_node(state: OSINTState) -> Dict[str, Any]:
     """Perform advanced analysis if enabled"""
-    print("Running advanced analysis...")
+    logger.info("Running advanced analysis...")
 
     config = state.get("config", {})
     advanced = config.get("advanced_analysis", {})
@@ -17,11 +20,11 @@ def advanced_analysis_node(state: OSINTState) -> Dict[str, Any]:
     network_data = None
 
     if advanced.get("timeline_correlation", False):
-        print("  Analyzing timeline correlations...")
+        logger.info("  Analyzing timeline correlations...")
         timeline_data = _analyze_timeline_correlation(state)
 
     if advanced.get("network_analysis", False):
-        print("  Performing network analysis...")
+        logger.info("  Performing network analysis...")
         network_data = _analyze_network_connections(state)
 
     return {"timeline_data": timeline_data, "network_data": network_data}
@@ -32,10 +35,14 @@ def _analyze_timeline_correlation(state: OSINTState) -> Dict[str, Any]:
     timestamps = []
 
     for item in state.get("google_data", []):
+        if not isinstance(item, dict):
+            continue
         if "timestamp" in item:
             timestamps.append({"platform": "google", "timestamp": item["timestamp"], "content_type": "search_result"})
 
     for item in state.get("social_data", []):
+        if not isinstance(item, dict):
+            continue
         if "timestamp" in item:
             timestamps.append(
                 {
@@ -58,12 +65,16 @@ def _analyze_network_connections(state: OSINTState) -> Dict[str, Any]:
     identifiers = set()
 
     for item in state.get("google_data", []):
+        if not isinstance(item, dict):
+            continue
         if "username" in item:
             identifiers.add(item["username"])
         if "email" in item:
             identifiers.add(item["email"])
 
     for item in state.get("social_data", []):
+        if not isinstance(item, dict):
+            continue
         if "username" in item:
             identifiers.add(item["username"])
         if "profile_url" in item:
@@ -119,10 +130,14 @@ def _map_platform_connections(state: OSINTState) -> Dict[str, List[str]]:
     platforms = set()
 
     for item in state.get("google_data", []):
+        if not isinstance(item, dict):
+            continue
         if "platform" in item:
             platforms.add(item["platform"])
 
     for item in state.get("social_data", []):
+        if not isinstance(item, dict):
+            continue
         if "platform" in item:
             platforms.add(item["platform"])
 

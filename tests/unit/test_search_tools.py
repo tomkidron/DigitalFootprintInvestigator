@@ -500,3 +500,86 @@ class TestGoogleSearchPriority:
         result = google_search("query")
         assert result == "Fallback Result"
         mock_fallback.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _search_with_googlesearch
+# ---------------------------------------------------------------------------
+
+
+class TestSearchWithGooglesearch:
+    def test_returns_urls_on_success(self):
+        from tools.search_tools import _search_with_googlesearch
+
+        with patch("googlesearch.search", return_value=iter(["https://example.com", "https://other.com"])):
+            result = _search_with_googlesearch("John Doe")
+        assert "https://example.com" in result
+        assert "https://other.com" in result
+
+    def test_warns_on_empty_results(self):
+        from tools.search_tools import _search_with_googlesearch
+
+        with patch("googlesearch.search", return_value=iter([])):
+            result = _search_with_googlesearch("John Doe")
+        assert "[WARN]" in result
+
+    def test_handles_rate_limit_exception(self):
+        from tools.search_tools import _search_with_googlesearch
+
+        def raise_mid_iteration():
+            yield "https://example.com"
+            raise Exception("429 Too Many Requests")
+
+        with patch("googlesearch.search", return_value=raise_mid_iteration()):
+            result = _search_with_googlesearch("John Doe")
+        assert "[WARN]" in result
+
+    def test_handles_import_error(self):
+        from tools.search_tools import _search_with_googlesearch
+
+        with patch.dict("sys.modules", {"googlesearch": None}):
+            result = _search_with_googlesearch("John Doe")
+        assert "not installed" in result.lower() or "error" in result.lower()
+
+    def test_recommends_serpapi_on_empty(self):
+        from tools.search_tools import _search_with_googlesearch
+
+        with patch("googlesearch.search", return_value=iter([])):
+            result = _search_with_googlesearch("John Doe")
+        assert "SERPAPI_KEY" in result or "RECOMMENDATION" in result
+
+
+# ---------------------------------------------------------------------------
+# social_media_search
+# ---------------------------------------------------------------------------
+
+
+class TestSocialMediaSearch:
+    def test_returns_string(self):
+        from tools.search_tools import social_media_search
+
+        with patch("tools.search_tools._search_platform", return_value="platform result"):
+            result = social_media_search("John Doe")
+        assert isinstance(result, str)
+
+    def test_includes_target_in_header(self):
+        from tools.search_tools import social_media_search
+
+        with patch("tools.search_tools._search_platform", return_value=""):
+            result = social_media_search("Jane Smith")
+        assert "Jane Smith" in result
+
+    def test_searches_all_expected_platforms(self):
+        from tools.search_tools import social_media_search
+
+        called_platforms = []
+
+        def capture(platform, target):
+            called_platforms.append(platform)
+            return ""
+
+        with patch("tools.search_tools._search_platform", side_effect=capture):
+            social_media_search("John Doe")
+
+        for platform in ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]:
+            assert platform in called_platforms

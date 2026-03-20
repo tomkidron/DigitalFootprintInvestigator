@@ -12,7 +12,7 @@ def run_command(cmd, description):
     print(f"\n{'=' * 60}")
     print(f"{description}")
     print(f"{'=' * 60}")
-    result = subprocess.run(cmd, shell=True)
+    result = subprocess.run(cmd, shell=True)  # nosec B602 - dev-only script, commands are hardcoded
     return result.returncode == 0
 
 

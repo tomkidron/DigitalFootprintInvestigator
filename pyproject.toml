@@ -1,0 +1,9 @@
+[tool.bandit]
+# B101: assert statements (tests only, excluded via hook config)
+# B112: try/except/continue - intentional in timestamp parsing loops
+# B311: random - not used for crypto
+# B404: subprocess import - dev scripts only
+# B603: subprocess without shell=True - hardcoded args, no user input
+# B607: partial executable path - docker binary, expected on PATH
+skips = ["B101", "B112", "B311", "B404", "B603", "B607"]
+exclude_dirs = ["tests", "venv", ".venv"]

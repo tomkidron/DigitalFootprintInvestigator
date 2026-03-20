@@ -340,7 +340,7 @@ def _search_github(target: str) -> str:
     """Search GitHub with repository analysis"""
     try:
         username = sanitize_target(target).replace(" ", "")
-        headers = {"User-Agent": "OSINT Tool 1.0"}
+        headers = {"User-Agent": "DigitalFootprintInvestigator/1.0"}
         github_token = os.getenv("GITHUB_TOKEN")
         if github_token:
             headers["Authorization"] = f"token {github_token}"
@@ -405,7 +405,7 @@ def _search_reddit(target: str) -> str:
     """Search Reddit with deep analysis"""
     try:
         username = sanitize_target(target).replace(" ", "")
-        headers = {"User-Agent": "OSINT Tool 1.0"}
+        headers = {"User-Agent": "platform:DigitalFootprintInvestigator:1.0 (by /u/tomkidron)"}
 
         profile_url = f"https://www.reddit.com/user/{username}/about.json"
         response = requests.get(profile_url, headers=headers, timeout=10)

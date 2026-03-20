@@ -333,3 +333,94 @@ class TestSearchTwitterTimeline:
         assert "[OK]" in result
         assert "testuser" in result
         assert "Test User" in result
+
+
+# ---------------------------------------------------------------------------
+# search_hibp_breaches — non-email input
+# ---------------------------------------------------------------------------
+
+
+class TestSearchHibpBreachesNonEmail:
+    def test_returns_error_for_username_input(self):
+        result = search_hibp_breaches("johndoe")
+        assert "[ERROR]" in result
+        assert "Invalid email" in result
+
+    def test_returns_error_for_empty_string(self):
+        result = search_hibp_breaches("")
+        assert "[ERROR]" in result
+
+
+# ---------------------------------------------------------------------------
+# enhanced_email_discovery
+# ---------------------------------------------------------------------------
+
+
+class TestEnhancedEmailDiscovery:
+    def test_returns_string(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        with patch.dict("os.environ", {}, clear=True):
+            result = enhanced_email_discovery("John Doe")
+        assert isinstance(result, str)
+
+    def test_includes_target_name(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        with patch.dict("os.environ", {}, clear=True):
+            result = enhanced_email_discovery("John Doe")
+        assert "John Doe" in result
+
+    def test_skips_pattern_generation_without_hibp_key(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        with patch.dict("os.environ", {}, clear=True):
+            result = enhanced_email_discovery("John Doe")
+        assert "[SKIP]" in result
+        assert "HIBP_API_KEY" in result
+
+    def test_generates_patterns_with_hibp_key(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        with (
+            patch.dict("os.environ", {"HIBP_API_KEY": "testkey"}),
+            patch("tools.api_tools.search_hibp_breaches", return_value="[OK] No breaches\n"),
+            patch("tools.api_tools.search_hunter_emails", return_value="[ERROR] No matches\n"),
+        ):
+            result = enhanced_email_discovery("John Doe")
+        assert "john.doe@gmail.com" in result or "Potential:" in result
+
+    def test_skips_common_domains_for_hunter(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        hunter_calls = []
+
+        def capture_hunter(domain, name):
+            hunter_calls.append(domain)
+            return "[ERROR] No matches\n"
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("tools.api_tools.search_hunter_emails", side_effect=capture_hunter),
+        ):
+            enhanced_email_discovery("John Doe")
+
+        for skipped in ["gmail.com", "yahoo.com", "hotmail.com"]:
+            assert skipped not in hunter_calls
+
+    def test_custom_domains_passed_to_hunter(self):
+        from tools.api_tools import enhanced_email_discovery
+
+        hunter_calls = []
+
+        def capture_hunter(domain, name):
+            hunter_calls.append(domain)
+            return "[ERROR] No matches\n"
+
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("tools.api_tools.search_hunter_emails", side_effect=capture_hunter),
+        ):
+            enhanced_email_discovery("John Doe", domains=["example.com"])
+
+        assert "example.com" in hunter_calls

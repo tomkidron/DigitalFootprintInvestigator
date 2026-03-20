@@ -1,7 +1,7 @@
 repos:
   # Block accidental secret commits
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+    rev: 68e8b45440415753fff70a312ece8da92ba85b4a  # frozen: v1.5.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
@@ -9,7 +9,7 @@ repos:
 
   # Lint and format Python
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.4
+    rev: e05c5c0818279e5ac248ac9e954431ba58865e61  # frozen: v0.15.7
     hooks:
       - id: ruff
         args: ['--fix']
@@ -17,7 +17,7 @@ repos:
 
   # Catch common issues before they land
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-merge-conflict   # no unresolved merge markers
       - id: check-added-large-files # warn on files > 500 KB
@@ -25,6 +25,19 @@ repos:
       - id: end-of-file-fixer      # ensure files end with a newline
       - id: trailing-whitespace    # strip trailing whitespace
       - id: check-case-conflict    # prevent case-sensitive filename conflicts
+      - id: check-yaml             # validate YAML files
+      - id: check-json             # validate JSON files
+        exclude: \.vscode/
+      - id: check-toml             # validate TOML files
+      - id: debug-statements       # block print()/pdb/breakpoint() commits
+
+  # Security scanning for Python source
+  - repo: https://github.com/PyCQA/bandit
+    rev: 92ae8b82fb422a639f0ed8d99e96cea769594e08  # frozen: 1.9.4
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        exclude: tests/
 
   # Block cache and generated files
   - repo: local

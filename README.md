@@ -7,7 +7,7 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 ## Features
 
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
-- **Platform coverage**: Google (SerpAPI or free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
+- **Platform coverage**: Google (Tavily → SerpAPI → free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery
 - **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
 - **Input validation**: Sanitization and validation of all user inputs
@@ -71,7 +71,8 @@ ANTHROPIC_API_KEY=sk-ant-...
 LLM_MODEL=claude-sonnet-4-6          # default; change to use a different Claude model
 
 # Optional — the tool works without these, but results improve significantly
-SERPAPI_KEY=...                       # Better Google results ($50/mo, 5000 searches)
+TAVILY_API_KEY=...                    # Best Google results (free tier available)
+SERPAPI_KEY=...                       # Google results fallback ($50/mo, 5000 searches)
 GITHUB_TOKEN=...                      # Higher rate limits (free personal access token)
 TWITTER_BEARER_TOKEN=...              # Twitter timeline access (free tier available)
 YOUTUBE_API_KEY=...                   # YouTube channel data (free, 10 000 units/day)
@@ -92,9 +93,10 @@ LOG_LEVEL=INFO                        # DEBUG, INFO, WARNING, ERROR
 | `TWITTER_BEARER_TOKEN` | [developer.twitter.com](https://developer.twitter.com) | Free tier |
 | `HUNTER_API_KEY` | [hunter.io/api](https://hunter.io/api) | Free tier (25/mo) |
 | `HIBP_API_KEY` | [haveibeenpwned.com/API/Key](https://haveibeenpwned.com/API/Key) | $3.50/mo |
+| `TAVILY_API_KEY` | [tavily.com](https://tavily.com) | Free tier available |
 | `SERPAPI_KEY` | [serpapi.com](https://serpapi.com) | $50/mo |
 
-> **Quick start recommendation**: Enable `GITHUB_TOKEN` and `YOUTUBE_API_KEY` first — both are free and require no approval.
+> **Quick start recommendation**: Enable `TAVILY_API_KEY`, `GITHUB_TOKEN`, and `YOUTUBE_API_KEY` first — all have free tiers and require no approval.
 
 ## Project Structure
 
@@ -122,8 +124,8 @@ DigitalFootprintInvestigator/
 ├── tests/
 │   ├── conftest.py           # Playwright session/page fixtures
 │   ├── healer.py             # Self-healing Playwright page wrapper
-│   ├── unit/                 # 144 unit tests (no browser or live API required)
-│   └── ui/                   # 18 Playwright browser tests
+│   ├── unit/                 # 215 unit tests (no browser or live API required)
+│   └── ui/                   # 25 Playwright browser tests
 ├── app.py                    # Streamlit web UI
 ├── main.py                   # CLI entry point
 ├── config.yaml               # Platform and analysis settings
@@ -132,6 +134,8 @@ DigitalFootprintInvestigator/
 ├── requirements.txt          # Python dependencies
 ├── Dockerfile                # Single image used by all three services
 ├── docker-compose.yml        # Services: osint-tool, unit-tests, tests
+├── pyproject.toml            # Bandit security scan config
+├── .pre-commit-config.yaml   # Pre-commit hooks
 └── .dockerignore             # Docker build exclusions
 ```
 
@@ -201,6 +205,19 @@ python main.py "Jane Smith" --timeline --network --deep
 
 Reports are saved to `reports/` with a timestamp, e.g. `reports/Jane_Smith_20260227_143022.md`.
 
+## Code Quality
+
+Pre-commit hooks run automatically on `git commit`:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Hooks: `detect-secrets`, `ruff` (lint + format), merge-conflict detection, large-file guard, YAML/JSON/TOML validation, debug-statement blocking, and `bandit` security scanning. Bandit config lives in `pyproject.toml`.
+
+To run all hooks manually: `pre-commit run --all-files`
+
 ## Customization
 
 ### Adding a platform
@@ -237,7 +254,7 @@ workflow.add_edge("analysis", "my_node")
 
 **"No Anthropic API key found"** — create `.env` from `.env.example` and set `ANTHROPIC_API_KEY`.
 
-**Google searches return no results** — the free `googlesearch-python` library is rate-limited and unreliable. Add `SERPAPI_KEY` to `.env` for consistent results.
+**Google searches return no results** — the free `googlesearch-python` library is rate-limited and unreliable. Add `TAVILY_API_KEY` or `SERPAPI_KEY` to `.env` for consistent results (Tavily is tried first, then SerpAPI, then the free fallback).
 
 **Page refresh hangs in Docker on Windows** — Streamlit’s file watcher conflicts with Docker volume mounts. `fileWatcherType = "none"` is set in `.streamlit/config.toml`; restore it if it gets removed.
 
@@ -257,7 +274,12 @@ Appropriate uses: security research, due diligence, investigative journalism, pe
 
 Prohibited uses: stalking or harassment, unauthorized surveillance, identity theft, doxxing, any illegal activity.
 
-All searches use publicly available information only. Users are responsible for compliance with local privacy laws (GDPR, CCPA, etc.), platform Terms of Service, and the Computer Fraud and Abuse Act (CFAA).
+All searches use publicly available information only. Users are responsible for compliance with:
+- Local privacy laws (GDPR, CCPA, etc.)
+- Platform Terms of Service (including Twitter/X, Reddit, YouTube, and others)
+- The Computer Fraud and Abuse Act (CFAA) and equivalent local laws
+
+The consent checkbox in the UI is not a legal shield — you remain fully responsible for how you use this tool.
 
 **By using this tool, you agree to use it responsibly and ethically.**
 

@@ -20,7 +20,7 @@ def cached(ttl=CACHE_TTL):
 
             # Create cache key from function name and args
             key_data = f"{func.__name__}:{args}:{kwargs}"
-            cache_key = hashlib.md5(key_data.encode()).hexdigest()
+            cache_key = hashlib.md5(key_data.encode(), usedforsecurity=False).hexdigest()  # nosec B324
             cache_file = CACHE_DIR / f"{cache_key}.json"
 
             # Check cache

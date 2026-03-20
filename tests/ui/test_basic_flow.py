@@ -76,6 +76,14 @@ def test_empty_input_validation(page):
 def test_investigation_lifecycle_ui(page):
     h_page = SelfHealingPage(page)
 
+    # Check consent first — required since the consent gate was added
+    consent_label = page.locator("label:has-text('I confirm I have a legitimate purpose')")
+    consent_label.wait_for(state="visible", timeout=8000)
+    consent_input = page.get_by_role("checkbox", name="I confirm I have a legitimate purpose", exact=False)
+    if not consent_input.is_checked():
+        consent_label.click()
+        page.wait_for_timeout(400)
+
     # Fill target and trigger input event
     input_field = page.locator("input[aria-label='Target Identifier']")
     input_field.fill("Test User")
