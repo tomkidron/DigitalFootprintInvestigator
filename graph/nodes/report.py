@@ -66,13 +66,12 @@ CRITICAL REPORTING ACCURACY:
 
 REPORT HEADER BLOCK (mandatory, immediately after the main # title):
 Immediately after the main `# OSINT Investigation Report: <target>` title line, include exactly this compact block — no extra text between the title and the block:
-```
+
 **Classification:** Open Source Intelligence (OSINT) — Public Information Only<br>
 **Report Generation Date:** {current_date}<br>
 **Data Collection Date:** {current_date}<br>
 **Prepared By:** Automated OSINT Analysis System<br>
 **Distribution:** Authorized Recipients Only
-```
 
 Report structure:
 - Executive Summary (specific findings, not generalizations)
@@ -106,7 +105,9 @@ Format: Professional markdown report with all sources cited and analysis methods
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = "".join(c for c in target if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_")
     filename = f"{safe_target}_{timestamp}.md"
-    filepath = output_dir / filename
+    filepath = (output_dir / filename).resolve()
+    if not str(filepath).startswith(str(output_dir.resolve())):
+        raise ValueError(f"Invalid report path: {filepath}")
 
     with open(filepath, "w", encoding="utf-8") as f:
         f.write(report)
