@@ -12,6 +12,7 @@ from tools.search_tools import (
     _search_platform,
     _search_reddit,
     _search_twitter,
+    _search_with_tavily,
 )
 
 # ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ class TestSearchTwitter:
         with patch("tools.api_tools.search_twitter_timeline") as mock_search:
             mock_search.return_value = "[ERROR] Twitter Bearer Token not configured\n"
             result = _search_twitter("testuser")
-        assert "Manual search" in result or "manual" in result.lower() or "@testuser" in result
+        assert "Manual search" in result or "manual" in result.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -299,18 +300,12 @@ class TestSearchReddit:
 
 
 class TestSearchPlatform:
-    def test_instagram_not_implemented(self):
-        result = _search_platform("instagram", "target")
-        assert "[ERROR]" in result
-        assert "instagram" in result.lower() or "INSTAGRAM" in result
-
-    def test_facebook_not_implemented(self):
-        result = _search_platform("facebook", "target")
-        assert "[ERROR]" in result
-
-    def test_soundcloud_not_implemented(self):
-        result = _search_platform("soundcloud", "target")
-        assert "[ERROR]" in result
+    def test_social_fallbacks(self):
+        """Verify that platforms without direct API correctly use Google dorking"""
+        for platform in ["instagram", "facebook", "soundcloud"]:
+            result = _search_platform(platform, "target")
+            assert "[WARN]" in result
+            assert platform.upper() in result
 
     def test_unknown_platform_returns_error(self):
         result = _search_platform("myspace", "target")
@@ -318,13 +313,13 @@ class TestSearchPlatform:
 
     def test_linkedin_calls_search_linkedin(self):
         result = _search_platform("linkedin", "Alice")
-        assert "LinkedIn" in result.upper() or "linkedin" in result.lower()
+        assert "LINKEDIN" in result.upper()
 
     def test_twitter_calls_search_twitter(self):
         with patch("tools.api_tools.search_twitter_timeline") as mock:
             mock.return_value = "[ERROR] not configured\n"
             result = _search_platform("twitter", "alice")
-        assert "TWITTER" in result.upper() or "twitter" in result.lower()
+        assert "TWITTER" in result.upper()
 
     def test_github_calls_search_github(self):
         mock_response = MagicMock()
@@ -333,6 +328,156 @@ class TestSearchPlatform:
             result = _search_platform("github", "alice")
         assert "GITHUB" in result.upper()
 
-    def test_result_contains_platform_header(self):
-        result = _search_platform("instagram", "someone")
-        assert "INSTAGRAM" in result
+
+# ---------------------------------------------------------------------------
+# _search_with_serpapi
+# ---------------------------------------------------------------------------
+
+
+class TestSearchWithSerpAPI:
+    @patch("serpapi.GoogleSearch")
+    def test_search_calls_serpapi_correctly(self, mock_search_class):
+        mock_search = MagicMock()
+        mock_search_class.return_value = mock_search
+        mock_search.get_dict.return_value = {"organic_results": [{"title": "S1", "link": "L1", "snippet": "Sn1"}]}
+
+        with patch("tools.search_tools._process_search_results") as mock_process:
+            mock_process.return_value = "Mocked Output"
+            from tools.search_tools import _search_with_serpapi
+
+            result = _search_with_serpapi("query", "fake_key")
+
+        mock_search_class.assert_called_once()
+        assert result == "Mocked Output"
+
+    @patch("serpapi.GoogleSearch")
+    def test_handles_serpapi_timeout(self, mock_search_class):
+        mock_search = MagicMock()
+        mock_search_class.return_value = mock_search
+        mock_search.get_dict.side_effect = Exception("Timeout")
+
+        from tools.search_tools import _search_with_serpapi
+
+        result = _search_with_serpapi("query", "fake_key")
+        assert "SerpAPI Rate Limit or Timeout" in result
+
+
+# ---------------------------------------------------------------------------
+# _search_with_tavily
+# ---------------------------------------------------------------------------
+
+
+class TestSearchWithTavily:
+    @patch("tavily.TavilyClient")
+    def test_search_calls_tavily_client_correctly(self, mock_client_class):
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.search.return_value = {
+            "results": [{"title": "Result 1", "url": "https://r1.com", "content": "Snippet 1"}]
+        }
+
+        with patch("tools.search_tools._process_search_results") as mock_process:
+            mock_process.return_value = "Mocked Output"
+            result = _search_with_tavily("query", "fake_key")
+
+        mock_client_class.assert_called_once_with(api_key="fake_key")
+        mock_client.search.assert_called_once_with(query="query", max_results=10, search_depth="advanced")
+        assert result == "Mocked Output"
+
+    @patch("tavily.TavilyClient")
+    def test_handles_tavily_import_error(self, mock_client_class):
+        mock_client_class.side_effect = ImportError("No module named 'tavily'")
+        result = _search_with_tavily("query", "fake_key")
+        assert "tavily-python library not installed" in result
+
+    @patch("tavily.TavilyClient")
+    def test_handles_tavily_exception(self, mock_client_class):
+        mock_client = MagicMock()
+        mock_client_class.return_value = mock_client
+        mock_client.search.side_effect = Exception("API Error")
+        result = _search_with_tavily("query", "fake_key")
+        assert "Tavily search error" in result
+
+
+# ---------------------------------------------------------------------------
+# _process_search_results
+# ---------------------------------------------------------------------------
+
+
+class TestProcessSearchResults:
+    def test_handles_empty_findings(self):
+        from tools.search_tools import _process_search_results
+
+        result = _process_search_results([], "my query", "TestProvider")
+        assert "No results found via TestProvider" in result
+
+    def test_formats_multiple_findings(self):
+        from tools.search_tools import _process_search_results
+
+        findings = [
+            {"title": "T1", "link": "L1", "snippet": "S1"},
+            {"title": "T2", "link": "L2", "snippet": "S2"},
+        ]
+        result = _process_search_results(findings, "query", "P1")
+        assert "1. T1" in result
+        assert "URL: L1" in result
+        assert "2. T2" in result
+        assert "(via P1)" in result
+
+    @patch("tools.search_tools._extract_identifiers")
+    @patch("tools.search_tools._search_contact_patterns")
+    @patch("tools.api_tools.discover_emails_from_text")
+    def test_calls_all_discovery_methods(self, mock_discover, mock_contact, mock_extract):
+        from tools.search_tools import _process_search_results
+
+        mock_extract.return_value = "Extracted ID"
+        mock_contact.return_value = "Contact Info"
+        mock_discover.return_value = ["test@email.com"]
+
+        findings = [{"title": "T", "link": "L", "snippet": "S"}]
+        result = _process_search_results(findings, "query", "P")
+
+        assert "Extracted Identifiers:" in result
+        assert "Extracted ID" in result
+        assert "Contact Information:" in result
+        assert "Contact Info" in result
+        assert "Discovered Emails:" in result
+        assert "test@email.com" in result
+
+
+# ---------------------------------------------------------------------------
+# google_search (Priority Logic)
+# ---------------------------------------------------------------------------
+
+
+class TestGoogleSearchPriority:
+    @patch.dict("os.environ", {"TAVILY_API_KEY": "tvkey", "SERPAPI_KEY": "srkey"})
+    @patch("tools.search_tools._search_with_tavily")
+    def test_prioritizes_tavily_over_serpapi(self, mock_tavily):
+        from tools.search_tools import google_search
+
+        mock_tavily.return_value = "Tavily Result"
+        result = google_search("query")
+        assert result == "Tavily Result"
+        mock_tavily.assert_called_once()
+
+    @patch.dict("os.environ", {"SERPAPI_KEY": "srkey"})
+    @patch("os.getenv", side_effect=lambda k: "srkey" if k == "SERPAPI_KEY" else None)
+    @patch("tools.search_tools._search_with_serpapi")
+    def test_uses_serpapi_if_tavily_missing(self, mock_serpapi, mock_env):
+        from tools.search_tools import google_search
+
+        mock_serpapi.return_value = "SerpAPI Result"
+        result = google_search("query")
+        assert result == "SerpAPI Result"
+        mock_serpapi.assert_called_once()
+
+    @patch("tools.search_tools._search_with_googlesearch")
+    @patch("os.getenv", return_value=None)
+    def test_falls_back_to_googlesearch(self, mock_env, mock_fallback):
+        from tools.search_tools import google_search
+
+        mock_fallback.return_value = "Fallback Result"
+        result = google_search("query")
+        assert result == "Fallback Result"
+        mock_fallback.assert_called_once()

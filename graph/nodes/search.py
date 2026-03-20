@@ -13,15 +13,17 @@ def google_node(state: OSINTState) -> dict:
 
     result = google_search(state["target"])
 
+    tavily_key = os.getenv("TAVILY_API_KEY")
     serpapi_key = os.getenv("SERPAPI_KEY")
     hibp_key = os.getenv("HIBP_API_KEY")
     hunter_key = os.getenv("HUNTER_API_KEY")
 
-    google_method = (
-        "[OK] SerpAPI: Professional Google search with snippets"
-        if serpapi_key and serpapi_key.strip()
-        else "[WARN] Free googlesearch library: Limited reliability, no snippets\n[TIP] Add SERPAPI_KEY for better results"
-    )
+    if tavily_key and tavily_key.strip():
+        google_method = "[OK] Tavily: Advanced web search optimized for OSINT"
+    elif serpapi_key and serpapi_key.strip():
+        google_method = "[OK] SerpAPI: Professional Google search with snippets"
+    else:
+        google_method = "[WARN] Free googlesearch library: Limited reliability, no snippets\n[TIP] Add TAVILY_API_KEY for best results"
 
     meta = [
         "",
@@ -54,10 +56,10 @@ def social_node(state: OSINTState) -> dict:
         "[OK] YouTube: Data API v3 (channels + statistics)",
         "[OK] Twitter/X: API v2 (timeline + metrics)",
         "[OK] Email Discovery: HIBP + Hunter.io + pattern generation",
-        "[WARN] LinkedIn: Google dorking only (no direct API)",
-        "[ERROR] Instagram: Not implemented (requires business account)",
-        "[ERROR] Facebook: Not implemented (high privacy restrictions)",
-        "[ERROR] SoundCloud: Not implemented",
+        "[WARN] LinkedIn: Google dorking fallback",
+        "[WARN] Instagram: Google dorking fallback",
+        "[WARN] Facebook: Google dorking fallback",
+        "[WARN] SoundCloud: Google dorking fallback",
     ]
 
     result = result + "\n" + "\n".join(meta)
