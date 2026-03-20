@@ -20,29 +20,20 @@ load_dotenv()
 
 
 class StreamlitLogHandler(logging.Handler):
-    """Custom logging handler to send logs to a Streamlit container"""
+    """Appends log records to a list stored in session_state.
+    The main thread polling loop reads from that list and renders it."""
 
-    def __init__(self, container_placeholder):
+    def __init__(self, log_buffer: list):
         super().__init__()
-        self.container_placeholder = container_placeholder
-        self.logs = []
-        # Capture the context from the main thread where the handler is created
+        self.log_buffer = log_buffer
         self.ctx = get_script_run_ctx()
 
     def emit(self, record):
-        # If calling from a thread without context, attach the captured context
         if not get_script_run_ctx():
             add_script_run_ctx(ctx=self.ctx)
-
-        msg = self.format(record)
-        self.logs.append(msg)
-        # Keep only last 50 logs to avoid overflow
-        if len(self.logs) > 50:
-            self.logs.pop(0)
-
-        # Join logs and render in code block
-        log_text = "\n".join(self.logs)
-        self.container_placeholder.code(log_text, language="log")
+        self.log_buffer.append(self.format(record))
+        if len(self.log_buffer) > 50:
+            self.log_buffer.pop(0)
 
 
 @st.cache_data
@@ -121,12 +112,15 @@ def main():
         st.session_state.stop_requested = False
     if "investigation_thread" not in st.session_state:
         st.session_state.investigation_thread = None
+    if "log_buffer" not in st.session_state:
+        st.session_state.log_buffer = []
 
     def start_investigation():
         st.session_state.processing = True
         st.session_state.stop_requested = False
         st.session_state.report_content = None
         st.session_state.latest_report_file = None
+        st.session_state.log_buffer = []
 
     def stop_investigation():
         st.session_state.stop_requested = True
@@ -228,11 +222,7 @@ def main():
             target_val = st.session_state.target_input
 
             if target_val and target_val.strip():
-                status_container = st.empty()
-                logs_expander = st.expander("Investigation Logs", expanded=True)
-                log_placeholder = logs_expander.empty()
-
-                st_handler = StreamlitLogHandler(log_placeholder)
+                st_handler = StreamlitLogHandler(st.session_state.log_buffer)
                 root_logger = logging.getLogger()
                 root_logger.addHandler(st_handler)
                 root_logger.setLevel(logging.INFO)
@@ -254,16 +244,21 @@ def main():
                 st.session_state.investigation_thread = thread
                 thread.start()
 
+                status_container = st.empty()
+                logs_expander = st.expander("Investigation Logs", expanded=True)
+                log_placeholder = logs_expander.empty()
+
                 with st.spinner(f"Investigating '{target_val}'..."):
                     status_container.info("Running searches and analysis... (Parallel Execution)")
                     while thread.is_alive():
                         if st.session_state.stop_requested:
                             status_container.warning("Stopping investigation...")
-                            # Daemon thread will be abandoned — it will finish its
-                            # current blocking call then exit naturally
                             thread.join(timeout=2)
                             break
+                        log_placeholder.code("\n".join(st.session_state.log_buffer) or " ", language="log")
                         time.sleep(0.5)
+                    # Final render after thread finishes
+                    log_placeholder.code("\n".join(st.session_state.log_buffer) or " ", language="log")
 
                 if st.session_state.stop_requested:
                     st.session_state.report_content = (
