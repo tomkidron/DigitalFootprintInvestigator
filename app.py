@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 
@@ -116,11 +117,19 @@ def main():
         st.session_state.report_content = None
     if "latest_report_file" not in st.session_state:
         st.session_state.latest_report_file = None
+    if "stop_requested" not in st.session_state:
+        st.session_state.stop_requested = False
+    if "investigation_thread" not in st.session_state:
+        st.session_state.investigation_thread = None
 
     def start_investigation():
         st.session_state.processing = True
+        st.session_state.stop_requested = False
         st.session_state.report_content = None
         st.session_state.latest_report_file = None
+
+    def stop_investigation():
+        st.session_state.stop_requested = True
 
     # Sidebar Configuration
     with st.sidebar:
@@ -197,7 +206,13 @@ def main():
             is_disabled = not target_val or not target_val.strip() or not consent
 
             if st.session_state.processing:
-                st.button("Investigation in progress...", disabled=True, use_container_width=True, key="processing_btn")
+                st.button(
+                    "⏹ Stop Investigation",
+                    type="primary",
+                    use_container_width=True,
+                    on_click=stop_investigation,
+                    key="stop_btn",
+                )
             else:
                 st.button(
                     "Start Investigation",
@@ -222,60 +237,76 @@ def main():
                 root_logger.addHandler(st_handler)
                 root_logger.setLevel(logging.INFO)
 
-                try:
-                    with st.spinner(f"Investigating '{target_val}'..."):
-                        status_container.info("Initializing workflow agents...")
-                        app = create_workflow()
+                result_holder = {}
 
+                def run_investigation():
+                    try:
+                        app = create_workflow()
                         inputs = {"target": target_val, "config": config}
                         thread_config = {"configurable": {"thread_id": f"web_{int(time.time())}"}}
+                        result_holder["result"] = app.invoke(inputs, thread_config)
+                    except Exception:
+                        import traceback
 
-                        status_container.info("Running searches and analysis... (Parallel Execution)")
+                        result_holder["error"] = traceback.format_exc()
 
-                        result = app.invoke(inputs, thread_config)
+                thread = threading.Thread(target=run_investigation, daemon=True)
+                st.session_state.investigation_thread = thread
+                thread.start()
 
-                        status_container.success("Investigation Complete!")
+                with st.spinner(f"Investigating '{target_val}'..."):
+                    status_container.info("Running searches and analysis... (Parallel Execution)")
+                    while thread.is_alive():
+                        if st.session_state.stop_requested:
+                            status_container.warning("Stopping investigation...")
+                            # Daemon thread will be abandoned — it will finish its
+                            # current blocking call then exit naturally
+                            thread.join(timeout=2)
+                            break
+                        time.sleep(0.5)
 
-                        report_content = None
-                        latest_file = None
-
-                        # 1. Exact Name Match
-                        normalized_target = target_val.replace(" ", "_")
-                        search_pattern = f"reports/*{normalized_target}*.md"
-                        list_of_files = glob.glob(search_pattern)
-
-                        # 2. Fallback: Recent files
-                        if not list_of_files:
-                            all_reports = glob.glob("reports/*.md")
-                            if all_reports:
-                                newest_file = max(all_reports, key=os.path.getmtime)
-                                if time.time() - os.path.getmtime(newest_file) < 120:
-                                    list_of_files = [newest_file]
-
-                        if list_of_files:
-                            latest_file = max(list_of_files, key=os.path.getctime)
-                            with open(latest_file, "r", encoding="utf-8") as f:
-                                report_content = f.read()
-                        elif "messages" in result and result["messages"]:
-                            report_content = result["messages"][-1].content
-                        else:
-                            report_content = "### Report Not Found\nCould not locate the generated report file or message content. Please check the logs."
-
-                        st.session_state.report_content = report_content
-                        st.session_state.latest_report_file = latest_file
-
-                except Exception:
-                    import traceback
-
-                    error_details = traceback.format_exc()
+                if st.session_state.stop_requested:
                     st.session_state.report_content = (
-                        f"### Error\nAn error occurred during investigation:\n\n```\n{error_details}\n```"
+                        "### Investigation Stopped\nThe investigation was manually stopped."
                     )
-                    st.error("An error occurred. Check the report section for details.")
-                finally:
-                    root_logger.removeHandler(st_handler)
-                    st.session_state.processing = False
-                    st.rerun()
+                elif "error" in result_holder:
+                    st.session_state.report_content = (
+                        f"### Error\nAn error occurred during investigation:\n\n```\n{result_holder['error']}\n```"
+                    )
+                else:
+                    result = result_holder.get("result", {})
+                    status_container.success("Investigation Complete!")
+
+                    report_content = None
+                    latest_file = None
+
+                    normalized_target = target_val.replace(" ", "_")
+                    list_of_files = glob.glob(f"reports/*{normalized_target}*.md")
+
+                    if not list_of_files:
+                        all_reports = glob.glob("reports/*.md")
+                        if all_reports:
+                            newest_file = max(all_reports, key=os.path.getmtime)
+                            if time.time() - os.path.getmtime(newest_file) < 120:
+                                list_of_files = [newest_file]
+
+                    if list_of_files:
+                        latest_file = max(list_of_files, key=os.path.getctime)
+                        with open(latest_file, "r", encoding="utf-8") as f:
+                            report_content = f.read()
+                    elif "messages" in result and result["messages"]:
+                        report_content = result["messages"][-1].content
+                    else:
+                        report_content = "### Report Not Found\nCould not locate the generated report file or message content. Please check the logs."
+
+                    st.session_state.report_content = report_content
+                    st.session_state.latest_report_file = latest_file
+
+                root_logger.removeHandler(st_handler)
+                st.session_state.processing = False
+                st.session_state.stop_requested = False
+                st.session_state.investigation_thread = None
+                st.rerun()
 
         # Result Display (Persistent)
         if st.session_state.report_content:

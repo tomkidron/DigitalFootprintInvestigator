@@ -1,0 +1,6 @@
+#!/bin/sh
+# Rebuild Docker images after every commit so the local container
+# is always in sync with the committed code before pushing.
+echo "[post-commit] Rebuilding Docker images..."
+docker compose build
+echo "[post-commit] Done."

@@ -48,3 +48,9 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: install-git-hooks
+        name: Install local git hooks (post-commit)
+        entry: python scripts/install_hooks.py
+        language: python
+        pass_filenames: false
+        always_run: true
