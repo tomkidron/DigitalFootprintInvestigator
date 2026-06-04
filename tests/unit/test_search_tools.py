@@ -513,8 +513,10 @@ class TestSearchWithGooglesearch:
 
         with patch("googlesearch.search", return_value=iter(["https://example.com", "https://other.com"])):
             result = _search_with_googlesearch("John Doe")
-        assert "https://example.com" in result
-        assert "https://other.com" in result
+        # Split result and check exact match to avoid CodeQL incomplete URL sanitization false positives
+        words = result.split()
+        assert any(w == "https://example.com" for w in words)
+        assert any(w == "https://other.com" for w in words)
 
     def test_warns_on_empty_results(self):
         from tools.search_tools import _search_with_googlesearch

@@ -423,4 +423,5 @@ class TestEnhancedEmailDiscovery:
         ):
             enhanced_email_discovery("John Doe", domains=["example.com"])
 
-        assert "example.com" in hunter_calls
+        # Use exact list equality to avoid CodeQL incomplete URL sanitization false positives
+        assert hunter_calls == ["example.com"]

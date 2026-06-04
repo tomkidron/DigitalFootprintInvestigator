@@ -55,11 +55,16 @@ def load_config():
 
 def get_saved_reports() -> list[Path]:
     """Return all saved report .md files sorted newest-first."""
-    reports_dir = Path("reports")
+    reports_dir = Path("reports").resolve()
     if not reports_dir.exists():
         return []
     files = sorted(reports_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
-    return files
+    valid_files = []
+    for f in files:
+        resolved = f.resolve()
+        if str(resolved).startswith(str(reports_dir)):
+            valid_files.append(resolved)
+    return valid_files
 
 
 def render_reports_page():
@@ -82,7 +87,9 @@ def render_reports_page():
         help="Reports are sorted newest-first.",
     )
 
-    selected_path = Path("reports") / selected_name
+    selected_path = (Path("reports") / selected_name).resolve()
+    if not str(selected_path).startswith(str(Path("reports").resolve())):
+        raise ValueError(f"Invalid report path: {selected_path}")
     with open(selected_path, "r", encoding="utf-8") as fh:
         content = fh.read()
 
@@ -305,7 +312,9 @@ def main():
                                 list_of_files = [newest_file]
 
                     if list_of_files:
-                        latest_file = max(list_of_files, key=os.path.getctime)
+                        latest_file = Path(max(list_of_files, key=os.path.getctime)).resolve()
+                        if not str(latest_file).startswith(str(Path("reports").resolve())):
+                            raise ValueError(f"Invalid report path: {latest_file}")
                         with open(latest_file, "r", encoding="utf-8") as f:
                             report_content = f.read()
                     elif "messages" in result and result["messages"]:
