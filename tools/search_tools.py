@@ -15,7 +15,7 @@ from utils.validation import sanitize_target
 logger = logging.getLogger("osint_tool")
 
 
-def google_search(query: str) -> str:
+def google_search(query: str, scan_mode: str = "advanced") -> str:
     """
     Performs Google searches and extracts relevant information.
     Use this to find initial information about a target including profiles, mentions,
@@ -23,6 +23,7 @@ def google_search(query: str) -> str:
 
     Args:
         query: The search query to execute
+        scan_mode: The scan configuration (quick or advanced)
 
     Returns:
         Search results with URLs and extracted identifiers
@@ -31,15 +32,15 @@ def google_search(query: str) -> str:
     logger.info(f"Google Search initiated for query: {query}")
 
     try:
-        tavily_key = os.getenv("TAVILY_API_KEY")
-        serpapi_key = os.getenv("SERPAPI_KEY")
+        tavily_key = os.getenv("TAVILY_API_KEY") if scan_mode != "quick" else None
+        serpapi_key = os.getenv("SERPAPI_KEY") if scan_mode != "quick" else None
 
         if tavily_key and tavily_key.strip():
             logger.debug("Using Tavily for web search")
-            return _search_with_tavily(query, tavily_key)
+            return _search_with_tavily(query, tavily_key, scan_mode=scan_mode)
         elif serpapi_key and serpapi_key.strip():
             logger.debug("Using SerpAPI for Google search")
-            return _search_with_serpapi(query, serpapi_key)
+            return _search_with_serpapi(query, serpapi_key, scan_mode=scan_mode)
         else:
             logger.warning(
                 "TAVILY_API_KEY and SERPAPI_KEY not configured. Using fallback googlesearch library (limited reliability)."
@@ -54,7 +55,7 @@ def google_search(query: str) -> str:
         return f"Search error: {str(e)}"
 
 
-def _search_with_serpapi(query: str, api_key: str) -> str:
+def _search_with_serpapi(query: str, api_key: str, scan_mode: str = "advanced") -> str:
     """Search using SerpAPI (paid, fastest, most reliable)"""
     try:
         from serpapi import GoogleSearch
@@ -82,7 +83,7 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
                     }
                 )
 
-        return _process_search_results(findings, query, provider="SerpAPI")
+        return _process_search_results(findings, query, provider="SerpAPI", scan_mode=scan_mode)
 
     except ImportError:
         logger.error("google-search-results library not installed")
@@ -92,7 +93,7 @@ def _search_with_serpapi(query: str, api_key: str) -> str:
         return f"SerpAPI search error: {str(e)}\nPlease check your SERPAPI_KEY and try again."
 
 
-def _search_with_tavily(query: str, api_key: str) -> str:
+def _search_with_tavily(query: str, api_key: str, scan_mode: str = "advanced") -> str:
     """Search using Tavily API (recommended for OSINT, optimized for LLM applications)"""
     try:
         from tavily import TavilyClient
@@ -115,7 +116,7 @@ def _search_with_tavily(query: str, api_key: str) -> str:
                 }
             )
 
-        return _process_search_results(findings, query, provider="Tavily")
+        return _process_search_results(findings, query, provider="Tavily", scan_mode=scan_mode)
 
     except ImportError:
         logger.error("tavily-python library not installed")
@@ -125,7 +126,7 @@ def _search_with_tavily(query: str, api_key: str) -> str:
         return f"Tavily search error: {str(e)}\nPlease check your TAVILY_API_KEY and try again."
 
 
-def _process_search_results(findings: list, query: str, provider: str) -> str:
+def _process_search_results(findings: list, query: str, provider: str, scan_mode: str = "advanced") -> str:
     """Shared logic to format findings, extract identifiers, and discover emails"""
     if not findings:
         return f"Google Search Results for: {query}\n\n[No results found via {provider}]\n"
@@ -160,7 +161,7 @@ def _process_search_results(findings: list, query: str, provider: str) -> str:
             output += f"  - {email}\n"
 
     if " " in query and "@" not in query:  # Looks like a name
-        email_discovery = enhanced_email_discovery(query)
+        email_discovery = enhanced_email_discovery(query, scan_mode=scan_mode)
         output += f"\n{email_discovery}"
 
     logger.info(f"{provider} returned {len(findings)} results for: {query}")
@@ -252,13 +253,14 @@ def _extract_identifiers(text: str) -> str:
     return "\n".join(identifiers) if identifiers else ""
 
 
-def social_media_search(target: str) -> str:
+def social_media_search(target: str, scan_mode: str = "advanced") -> str:
     """
     Searches across multiple social media platforms for profiles and activity.
     Supports LinkedIn, Twitter, GitHub, Reddit, and more.
 
     Args:
         target: The target to search for (name, username, email)
+        scan_mode: The scan configuration (quick or advanced)
 
     Returns:
         Results from multiple social media platforms
@@ -269,12 +271,12 @@ def social_media_search(target: str) -> str:
 
     platforms = ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]
     for platform in platforms:
-        results.append(_search_platform(platform, target))
+        results.append(_search_platform(platform, target, scan_mode=scan_mode))
 
     return "\n".join(results)
 
 
-def _search_platform(platform: str, target: str) -> str:
+def _search_platform(platform: str, target: str, scan_mode: str = "advanced") -> str:
     """Search a specific platform"""
     output = f"\n{platform.upper()} Search:\n"
     output += "-" * 40 + "\n"
@@ -282,18 +284,18 @@ def _search_platform(platform: str, target: str) -> str:
     if platform == "linkedin":
         output += _search_linkedin(target)
     elif platform == "twitter":
-        output += _search_twitter(target)
+        output += _search_twitter(target, scan_mode=scan_mode)
     elif platform == "github":
-        output += _search_github(target)
+        output += _search_github(target, scan_mode=scan_mode)
     elif platform == "reddit":
         output += _search_reddit(target)
     elif platform == "youtube":
-        output += _search_youtube(target)
+        output += _search_youtube(target, scan_mode=scan_mode)
     elif platform in ["instagram", "facebook", "soundcloud"]:
         output += f"[WARN] {platform.upper()}: Direct API not accessable. Using Google dork fallback.\n\n"
         query = f'site:{platform}.com "{target}"'
         output += f"Search query: {query}\n\n"
-        output += google_search(query)
+        output += google_search(query, scan_mode=scan_mode)
     else:
         output += f"[ERROR] Platform {platform} not yet implemented\n"
 
@@ -311,7 +313,7 @@ def _search_linkedin(target: str) -> str:
     )
 
 
-def _search_twitter(target: str) -> str:
+def _search_twitter(target: str, scan_mode: str = "advanced") -> str:
     """Search Twitter/X with API"""
     if re.search(r"[^\x00-\x7F]", target):
         return (
@@ -320,28 +322,36 @@ def _search_twitter(target: str) -> str:
             f"Manual search required: Search '{target}' on twitter.com\n"
         )
 
-    from tools.api_tools import search_twitter_timeline
+    if scan_mode == "quick":
+        result = "[SKIP] Twitter/X: Direct API skipped in Quick Scan mode.\n"
+    else:
+        from tools.api_tools import search_twitter_timeline
 
-    username = target.replace(" ", "").lower()
-    result = search_twitter_timeline(username)
+        username = target.replace(" ", "").lower()
+        result = search_twitter_timeline(username)
 
-    if "error" in result.lower() or "not configured" in result.lower() or "not found" in result.lower():
-        result += "\n[WARN] Twitter API failed or returned no results. Falling back to Google dork. Manual search/verification recommended:\n\n"
+    if (
+        "error" in result.lower()
+        or "not configured" in result.lower()
+        or "not found" in result.lower()
+        or "skipped" in result.lower()
+    ):
+        result += "\n[WARN] Twitter API failed or was skipped. Falling back to Google dork. Manual search/verification recommended:\n\n"
         query = f'site:twitter.com OR site:x.com "{target}"'
         result += f"Search query: {query}\n\n"
-        result += google_search(query)
+        result += google_search(query, scan_mode=scan_mode)
 
     return result
 
 
 @cached(ttl=3600)
 @retry(max_attempts=3, delay=2)
-def _search_github(target: str) -> str:
+def _search_github(target: str, scan_mode: str = "advanced") -> str:
     """Search GitHub with repository analysis"""
     try:
         username = sanitize_target(target).replace(" ", "")
         headers = {"User-Agent": "DigitalFootprintInvestigator/1.0"}
-        github_token = os.getenv("GITHUB_TOKEN")
+        github_token = os.getenv("GITHUB_TOKEN") if scan_mode != "quick" else None
         if github_token:
             headers["Authorization"] = f"token {github_token}"
 
@@ -460,13 +470,16 @@ def _search_reddit(target: str) -> str:
         return f"Reddit search error: {str(e)}\n"
 
 
-def _search_youtube(target: str) -> str:
+def _search_youtube(target: str, scan_mode: str = "advanced") -> str:
     """Search YouTube with API"""
-    from tools.api_tools import search_youtube_channel
+    if scan_mode == "quick":
+        result = "[SKIP] YouTube: Direct API skipped in Quick Scan mode.\n"
+    else:
+        from tools.api_tools import search_youtube_channel
 
-    result = search_youtube_channel(target)
+        result = search_youtube_channel(target)
 
-    if "not configured" in result:
+    if "not configured" in result or "skipped" in result:
         result += f"\nManual search: Search '{target}' on youtube.com\n"
 
     return result

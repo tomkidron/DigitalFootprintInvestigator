@@ -13,7 +13,8 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 - **Input validation**: Sanitization and validation of all user inputs
 - **Streamlit web UI**: interactive interface with dual tabs (Investigate / Reports) for real-time log streaming and viewing saved reports inline
 - **CLI mode**: scriptable via `python main.py`
-- **Advanced analysis** (optional): timeline correlation, network analysis, deep content analysis
+- **Advanced analysis** (optional): timeline correlation, social connection analysis, deep content analysis
+- **Scan Modes**: choose between **Quick Scan** (free, unauthenticated fallbacks only) and **Advanced Scan** (premium integrations using configured API keys)
 - **Docker-first**: a single image runs the app, unit tests, and UI tests
 
 ## Prerequisites
@@ -172,26 +173,37 @@ docker compose run --rm tests
 
 `config.yaml` controls platforms and advanced analysis defaults. The Streamlit sidebar and CLI flags override these values per run.
 
-**Advanced analysis** (each option adds an extra LLM pass; all off by default):
+**Scan Modes**:
+* **Quick Scan**: Runs unauthenticated, utilizing free, as-is tools (e.g. Google dorking fallbacks) and bypassing all premium services (skips Tavily, SerpAPI, Hunter.io, HIBP, Twitter, YouTube API keys/tokens).
+* **Advanced Scan**: The default mode, executing full query logic via any configured premium APIs in `.env`.
+
+**Advanced analysis** (all off by default; processed locally during the analysis phase):
 
 ```yaml
 advanced_analysis:
   timeline_correlation: false   # Build a chronological activity timeline
-  network_analysis: false       # Map relationships between accounts
+  network_analysis: false       # Map social connections (displays as "Social Connection Analysis" in UI)
   deep_content_analysis: false  # Sentiment, topics, behavioral patterns
 ```
 
 **CLI flags:**
 
 ```bash
+# Run a quick scan (free services only)
+python main.py "Jane Smith" --quick
+
+# Run an advanced scan with timeline and social connection correlation enabled
 python main.py "Jane Smith" --timeline --network --deep
 ```
 
 ## Usage Examples
 
 ```bash
-# Name
+# Name (default Advanced scan)
 python main.py "Jane Smith"
+
+# Quick scan mode (no API tokens or secrets required)
+python main.py "Jane Smith" --quick
 
 # Email
 python main.py "jane.smith@example.com"
@@ -199,7 +211,7 @@ python main.py "jane.smith@example.com"
 # Username
 python main.py "@janesmith"
 
-# With advanced analysis
+# With advanced analysis enabled
 python main.py "Jane Smith" --timeline --network --deep
 ```
 

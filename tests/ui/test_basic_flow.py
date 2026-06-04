@@ -48,7 +48,7 @@ def test_sidebar_toggles(page):
 
     # Check sidebar toggles
     # Streamlit toggles are often divs or labels containing the text
-    toggles = ["Timeline Correlation", "Network Analysis", "Deep Content Analysis"]
+    toggles = ["Timeline Correlation", "Social Connection Analysis", "Deep Content Analysis"]
 
     for toggle_text in toggles:
         # Toggles in Streamlit have data-testid='stCheckbox' or labels
@@ -152,7 +152,7 @@ def test_whitespace_only_input(page):
 
 def test_toggle_state_changes(page):
     """Clicking a sidebar toggle must actually change its checked state."""
-    toggle_labels = ["Timeline Correlation", "Network Analysis", "Deep Content Analysis"]
+    toggle_labels = ["Timeline Correlation", "Social Connection Analysis", "Deep Content Analysis"]
 
     for label in toggle_labels:
         toggle_label = page.locator(f"label:has-text('{label}')")
@@ -203,7 +203,7 @@ def test_start_button_disabled_on_load(page):
 
 def test_config_header_visible(page):
     """The sidebar must display a 'Configuration' header."""
-    config_header = page.locator("section[data-testid='stSidebar']").get_by_text("Configuration", exact=False)
+    config_header = page.locator("section[data-testid='stSidebar']").get_by_text("Configuration", exact=True)
     config_header.wait_for(state="visible", timeout=8000)
     assert config_header.is_visible()
     print("[OK] Configuration header is visible in the sidebar")
@@ -223,3 +223,39 @@ def test_title_visible(page):
     heading.wait_for(state="visible", timeout=8000)
     assert heading.is_visible()
     print("[OK] Main page title is visible")
+
+
+def test_quick_scan_hides_advanced_options(page):
+    """Selecting 'Quick' scan must hide the 'Advanced Analysis' section and its toggles."""
+    subheader = page.locator("section[data-testid='stSidebar']").get_by_text("Advanced Analysis", exact=False)
+    subheader.wait_for(state="visible", timeout=8000)
+    assert subheader.is_visible()
+
+    toggles = ["Timeline Correlation", "Social Connection Analysis", "Deep Content Analysis"]
+    for label in toggles:
+        toggle = page.locator(f"label:has-text('{label}')")
+        assert toggle.is_visible()
+
+    # Select Quick Scan
+    quick_radio = page.locator("label:has-text('Quick')")
+    quick_radio.click()
+    page.wait_for_timeout(500)
+
+    # Verify hidden
+    assert not subheader.is_visible()
+    for label in toggles:
+        toggle = page.locator(f"label:has-text('{label}')")
+        assert not toggle.is_visible()
+
+    # Select Advanced Scan to restore
+    advanced_radio = page.locator("label:has-text('Advanced')")
+    advanced_radio.click()
+    page.wait_for_timeout(500)
+
+    # Verify visible again
+    assert subheader.is_visible()
+    for label in toggles:
+        toggle = page.locator(f"label:has-text('{label}')")
+        assert toggle.is_visible()
+
+    print("[OK] Quick Scan correctly hides Advanced Analysis options in the UI")

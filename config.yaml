@@ -8,6 +8,7 @@ advanced_analysis:
 
 # Search Configuration
 search:
+  mode: advanced                # Options: quick, advanced
   max_results: 20
   timeout: 30
   parallel_execution: true

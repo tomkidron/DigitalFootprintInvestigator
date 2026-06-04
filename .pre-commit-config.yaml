@@ -29,6 +29,7 @@ repos:
       - id: check-json             # validate JSON files
         exclude: \.vscode/
       - id: check-toml             # validate TOML files
+      - id: check-ast              # validate Python AST (catches import/syntax errors)
       - id: debug-statements       # block print()/pdb/breakpoint() commits
 
   # Security scanning for Python source

@@ -131,33 +131,52 @@ def main():
 
         config = load_config()
 
-        st.subheader("Advanced Analysis")
-        if "timeline" not in st.session_state:
-            st.session_state.timeline = config["advanced_analysis"].get("timeline_correlation", False)
-        if "network" not in st.session_state:
-            st.session_state.network = config["advanced_analysis"].get("network_analysis", False)
-        if "deep_content" not in st.session_state:
-            st.session_state.deep_content = config["advanced_analysis"].get("deep_content_analysis", False)
+        st.subheader("Scan Configuration")
+        if "scan_mode" not in st.session_state:
+            st.session_state.scan_mode = config.get("search", {}).get("mode", "advanced").capitalize()
 
-        timeline = st.toggle(
-            "Timeline Correlation",
-            value=st.session_state.timeline,
-            help="Constructs a chronological timeline of the target's activities across all discovered platforms.",
+        scan_mode_val = st.radio(
+            "Scan Mode",
+            options=["Quick", "Advanced"],
+            index=0 if st.session_state.scan_mode == "Quick" else 1,
+            help="Quick Scan runs unauthenticated using free, as-is services. Advanced Scan runs using configured API keys and premium services.",
+            key="scan_mode_radio",
         )
-        network = st.toggle(
-            "Network Analysis",
-            value=st.session_state.network,
-            help="Visualizes relationships and interactions between the target and other entities or accounts.",
-        )
-        deep_content = st.toggle(
-            "Deep Content Analysis",
-            value=st.session_state.deep_content,
-            help="Performs in-depth analysis of post content, including sentiment, topics, and behavioral patterns.",
-        )
+        st.session_state.scan_mode = scan_mode_val
+        config["scan_mode"] = scan_mode_val.lower()
 
-        config["advanced_analysis"]["timeline_correlation"] = timeline
-        config["advanced_analysis"]["network_analysis"] = network
-        config["advanced_analysis"]["deep_content_analysis"] = deep_content
+        if scan_mode_val == "Advanced":
+            st.subheader("Advanced Analysis")
+            if "timeline" not in st.session_state:
+                st.session_state.timeline = config["advanced_analysis"].get("timeline_correlation", False)
+            if "network" not in st.session_state:
+                st.session_state.network = config["advanced_analysis"].get("network_analysis", False)
+            if "deep_content" not in st.session_state:
+                st.session_state.deep_content = config["advanced_analysis"].get("deep_content_analysis", False)
+
+            timeline = st.toggle(
+                "Timeline Correlation",
+                value=st.session_state.timeline,
+                help="Constructs a chronological timeline of the target's activities across all discovered platforms.",
+            )
+            network = st.toggle(
+                "Social Connection Analysis",
+                value=st.session_state.network,
+                help="Visualizes relationships and interactions between the target and other entities or accounts.",
+            )
+            deep_content = st.toggle(
+                "Deep Content Analysis",
+                value=st.session_state.deep_content,
+                help="Performs in-depth analysis of post content, including sentiment, topics, and behavioral patterns.",
+            )
+
+            config["advanced_analysis"]["timeline_correlation"] = timeline
+            config["advanced_analysis"]["network_analysis"] = network
+            config["advanced_analysis"]["deep_content_analysis"] = deep_content
+        else:
+            config["advanced_analysis"]["timeline_correlation"] = False
+            config["advanced_analysis"]["network_analysis"] = False
+            config["advanced_analysis"]["deep_content_analysis"] = False
 
         st.divider()
         st.info("Ensure you have set up your API keys in .env for full functionality.")

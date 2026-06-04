@@ -200,7 +200,7 @@ def discover_emails_from_text(text: str, target_name: str) -> List[str]:
     return [email for email in set(emails) if any(part in email.lower() for part in name_parts)]
 
 
-def enhanced_email_discovery(target_name: str, domains: List[str] = None) -> str:
+def enhanced_email_discovery(target_name: str, domains: List[str] = None, scan_mode: str = "advanced") -> str:
     """Enhanced email discovery using multiple methods"""
     output = f"Email Discovery for: {target_name}\n"
     output += "=" * 50 + "\n"
@@ -211,16 +211,23 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None) -> str
         domains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
 
     # Method 1: Hunter.io domain search
-    for domain in domains:
-        if domain not in ["gmail.com", "yahoo.com", "hotmail.com"]:
-            hunter_result = search_hunter_emails(domain, target_name)
-            output += f"\nHunter.io - {domain}:\n{hunter_result}"
+    if scan_mode == "quick":
+        output += "\nHunter.io Domain Search: [SKIP] Hunter.io search skipped in Quick Scan mode.\n"
+    else:
+        for domain in domains:
+            if domain not in ["gmail.com", "yahoo.com", "hotmail.com"]:
+                hunter_result = search_hunter_emails(domain, target_name)
+                output += f"\nHunter.io - {domain}:\n{hunter_result}"
 
     # Method 2: Generate common email patterns (ONLY IF HIBP IS CONFIGURED)
-    hibp_key = os.getenv("HIBP_API_KEY")
+    hibp_key = os.getenv("HIBP_API_KEY") if scan_mode != "quick" else None
     name_parts = target_name.lower().split()
 
-    if not hibp_key:
+    if scan_mode == "quick":
+        output += (
+            "\n[SKIP] Common Email Pattern Generation skipped in Quick Scan mode (requires breach verification).\n"
+        )
+    elif not hibp_key:
         output += "\n[SKIP] Common Email Pattern Generation disabled.\n"
         output += "Reason: HIBP_API_KEY is not configured. Generating patterns without breach verification produces unreliable data.\n"
     elif len(name_parts) >= 2:

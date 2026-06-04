@@ -574,7 +574,7 @@ class TestSocialMediaSearch:
 
         called_platforms = []
 
-        def capture(platform, target):
+        def capture(platform, target, **kwargs):
             called_platforms.append(platform)
             return ""
 

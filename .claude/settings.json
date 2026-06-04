@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pytest -x -q -m 'not integration and not local_only' 2>&1 | tail -20"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "mcp__playwright__browser_navigate",
