@@ -234,6 +234,7 @@ def test_quick_scan_hides_advanced_options(page):
     toggles = ["Timeline Correlation", "Social Connection Analysis", "Deep Content Analysis"]
     for label in toggles:
         toggle = page.locator(f"label:has-text('{label}')")
+        toggle.wait_for(state="visible", timeout=5000)
         assert toggle.is_visible()
 
     # Select Quick Scan
@@ -253,9 +254,11 @@ def test_quick_scan_hides_advanced_options(page):
     page.wait_for_timeout(500)
 
     # Verify visible again
+    subheader.wait_for(state="visible", timeout=5000)
     assert subheader.is_visible()
     for label in toggles:
         toggle = page.locator(f"label:has-text('{label}')")
+        toggle.wait_for(state="visible", timeout=5000)
         assert toggle.is_visible()
 
     print("[OK] Quick Scan correctly hides Advanced Analysis options in the UI")
