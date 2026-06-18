@@ -105,8 +105,8 @@ def render_reports_page():
 
 
 def main():
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        st.warning("No Anthropic API key found in .env file. Please configure your API keys.")
+    if not os.getenv("GEMINI_API_KEY"):
+        st.warning("No Gemini API key found in .env file. Please configure your API keys.")
 
     # Initialize session state variables
     if "processing" not in st.session_state:

@@ -2,7 +2,7 @@
 
 > **EDUCATIONAL USE ONLY**: This tool is designed for educational purposes, security research, and legitimate OSINT investigations. Users must comply with all applicable laws and ethical guidelines. Misuse for stalking, harassment, or illegal activities is strictly prohibited.
 
-A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/langgraph/) that searches across Google, social media platforms, and enrichment APIs in parallel, then chains the results through an analysis and report-generation stage powered by Claude (Anthropic).
+A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/langgraph/) that searches across Google, social media platforms, and enrichment APIs in parallel, then chains the results through an analysis and report-generation stage powered by Google Gemini.
 
 ## Features
 
@@ -20,7 +20,7 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 ## Prerequisites
 
 - Python 3.11+ (or Docker)
-- **Required**: Anthropic API key
+- **Required**: Google Gemini API key
 - **Optional**: additional API keys for richer results (see [Environment](#environment))
 
 ## Quick Start
@@ -29,7 +29,7 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 
 ```bash
 # Copy and fill in your API keys
-cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+cp .env.example .env   # then edit .env and set GEMINI_API_KEY
 
 # Build and start the web UI
 docker compose up --build
@@ -68,8 +68,9 @@ Copy `.env.example` to `.env` and configure:
 
 ```env
 # Required
-ANTHROPIC_API_KEY=sk-ant-...
-LLM_MODEL=claude-sonnet-4-6          # default; change to use a different Claude model
+GEMINI_API_KEY=your_gemini_api_key_here
+LLM_MODEL=gemini-2.5-pro             # default reasoning model
+LLM_MODEL_FAST=gemini-2.5-flash      # default fast analysis model
 
 # Optional — the tool works without these, but results improve significantly
 TAVILY_API_KEY=...                    # Best Google results (free tier available)
@@ -88,7 +89,7 @@ LOG_LEVEL=INFO                        # DEBUG, INFO, WARNING, ERROR
 
 | Key | Where to get it | Cost |
 |-----|----------------|------|
-| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) | Pay-per-use |
+| `GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com/) | Pay-per-use |
 | `GITHUB_TOKEN` | GitHub → Settings → Developer settings → Personal access tokens | Free |
 | `YOUTUBE_API_KEY` | [console.developers.google.com](https://console.developers.google.com) → YouTube Data API v3 | Free (quota) |
 | `TWITTER_BEARER_TOKEN` | [developer.twitter.com](https://developer.twitter.com) | Free tier |
@@ -109,14 +110,14 @@ DigitalFootprintInvestigator/
 │   │   ├── search.py         # Google and social search nodes (run in parallel)
 │   │   ├── analysis.py       # Data correlation and pattern extraction
 │   │   ├── advanced.py       # Optional timeline / network / content analysis
-│   │   └── report.py         # Claude-powered report generation
+│   │   └── report.py         # Gemini-powered report generation
 │   ├── state.py              # LangGraph state TypedDict
 │   └── workflow.py           # Graph construction and MemorySaver checkpointing
 ├── tools/
 │   ├── search_tools.py       # Google search and platform scrapers
 │   └── api_tools.py          # HIBP, Hunter.io, YouTube, Twitter wrappers
 ├── utils/
-│   ├── llm.py                # Shared ChatAnthropic factory
+│   ├── llm.py                # Shared Google GenAI factory
 │   ├── logger.py             # Logging setup
 │   ├── cache.py              # Disk-based caching for API calls
 │   ├── retry.py              # Exponential backoff retry logic
@@ -152,7 +153,7 @@ python -m pytest tests/unit/ -v
 playwright install chromium   # first time only
 python -m pytest tests/ui/ -m "not integration" -v
 
-# Integration tests (require ANTHROPIC_API_KEY and a full workflow run)
+# Integration tests (require GEMINI_API_KEY and a full workflow run)
 python -m pytest tests/ui/ -m integration -v
 ```
 
@@ -264,7 +265,7 @@ workflow.add_edge("analysis", "my_node")
 
 ## Troubleshooting
 
-**"No Anthropic API key found"** — create `.env` from `.env.example` and set `ANTHROPIC_API_KEY`.
+**"No Gemini API key found"** — create `.env` from `.env.example` and set `GEMINI_API_KEY`.
 
 **Google searches return no results** — the free `googlesearch-python` library is rate-limited and unreliable. Add `TAVILY_API_KEY` or `SERPAPI_KEY` to `.env` for consistent results (Tavily is tried first, then SerpAPI, then the free fallback).
 

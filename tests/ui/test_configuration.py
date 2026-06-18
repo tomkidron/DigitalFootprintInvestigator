@@ -22,7 +22,7 @@ from playwright.sync_api import sync_playwright
 
 @pytest.fixture(scope="module")
 def streamlit_app_no_keys():
-    """Start Streamlit on port 8503 with ANTHROPIC_API_KEY cleared.
+    """Start Streamlit on port 8503 with GEMINI_API_KEY cleared.
 
     python-dotenv's load_dotenv() (override=False) will not overwrite vars
     that are already set in the process env, so passing an empty string here
@@ -38,7 +38,7 @@ def streamlit_app_no_keys():
 
     env = {
         **os.environ,
-        "ANTHROPIC_API_KEY": "",
+        "GEMINI_API_KEY": "",
     }
 
     proc = subprocess.Popen(
@@ -83,11 +83,11 @@ def page_no_keys(streamlit_app_no_keys):
 
 
 def test_no_api_key_warning(page_no_keys):
-    """When ANTHROPIC_API_KEY is not set, the app must display the warning
+    """When GEMINI_API_KEY is not set, the app must display the warning
     banner pointing users to configure their API key."""
     page = page_no_keys
 
-    warning = page.get_by_text("No Anthropic API key found", exact=False)
+    warning = page.get_by_text("No Gemini API key found", exact=False)
     warning.wait_for(state="visible", timeout=10000)
     assert warning.is_visible()
     print("[OK] API key warning banner is visible when no key is configured")

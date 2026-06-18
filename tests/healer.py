@@ -82,7 +82,7 @@ class SelfHealingPage:
         """
         import json
 
-        from langchain_anthropic import ChatAnthropic
+        from langchain_google_genai import ChatGoogleGenerativeAI
         from langchain_core.messages import HumanMessage, SystemMessage
 
         logger.info(f"Triggering AI healing for '{description}' (failed selector: {selector})")
@@ -91,8 +91,8 @@ class SelfHealingPage:
         if not dom_snapshot:
             raise Exception("AI Healing failed: No interactive elements found in DOM snapshot.")
 
-        model = os.getenv("LLM_MODEL", "claude-sonnet-4-6")
-        llm = ChatAnthropic(model=model, temperature=0, timeout=30)
+        model = os.getenv("LLM_MODEL_FAST", "gemini-2.5-flash")
+        llm = ChatGoogleGenerativeAI(model=model, temperature=0, timeout=30)
 
         prompt = f"""
         A UI test failed to find an element with selector: {selector}

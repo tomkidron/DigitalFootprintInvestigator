@@ -2,7 +2,7 @@
 Integration tests for the full investigation → report flow.
 
 These tests require:
-  - A valid ANTHROPIC_API_KEY set in the environment
+  - A valid GEMINI_API_KEY set in the environment
   - The complete LangGraph workflow to execute successfully
 
 Run them explicitly with:
@@ -20,7 +20,7 @@ from tests.healer import SelfHealingPage
 
 
 def _has_llm_key():
-    return bool(os.getenv("ANTHROPIC_API_KEY"))
+    return bool(os.getenv("GEMINI_API_KEY"))
 
 
 def _trigger_investigation(page, h_page, target):
@@ -51,7 +51,7 @@ def _trigger_investigation(page, h_page, target):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_report_section_appears(page):
     """After a successful investigation the '📄 Investigation Report' subheader,
     markdown content, and 'Download Report' button must all be visible."""
@@ -70,7 +70,7 @@ def test_report_section_appears(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_download_button_present(page):
     """The download button must be labelled 'Download Report' and be visible
     after the investigation completes."""
@@ -85,7 +85,7 @@ def test_download_button_present(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_error_report_on_failure(page):
     """When the workflow encounters an error, the report section must display
     the error traceback (not just an st.error toast)."""
@@ -101,7 +101,7 @@ def test_error_report_on_failure(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_logs_expander_appears_during_investigation(page):
     """Once 'Start Investigation' is clicked the 'Investigation Logs' expander
     must become visible before the workflow completes."""
@@ -116,7 +116,7 @@ def test_logs_expander_appears_during_investigation(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_report_content_has_text(page):
     """After a successful investigation the rendered report markdown must
     contain non-trivial text (more than just the heading)."""
@@ -136,7 +136,7 @@ def test_report_content_has_text(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_stop_button_appears_during_investigation(page):
     """While the investigation is running the start button must be replaced by
     the active '⏹ Stop Investigation' button."""
@@ -159,7 +159,7 @@ def test_stop_button_appears_during_investigation(page):
 
 
 @pytest.mark.integration
-@pytest.mark.skipif(not _has_llm_key(), reason="No Anthropic API key found in environment")
+@pytest.mark.skipif(not _has_llm_key(), reason="No Gemini API key found in environment")
 def test_quick_scan_runs(page):
     """Verify that selecting Quick Scan runs an investigation successfully and uses Quick Scan parameters."""
     h_page = SelfHealingPage(page)

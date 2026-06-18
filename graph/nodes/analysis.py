@@ -12,7 +12,7 @@ def analysis_node(state):
     google_data = "\n".join(state.get("google_data", []))
     social_data = "\n".join(state.get("social_data", []))
 
-    llm = get_llm()
+    llm = get_llm(purpose="analysis")
 
     prompt = f"""Analyze and correlate all gathered intelligence on: {target}
 

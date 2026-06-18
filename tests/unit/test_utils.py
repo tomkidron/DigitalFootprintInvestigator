@@ -22,28 +22,35 @@ from utils.logger import ProgressTracker, setup_logger
 
 
 class TestGetLlm:
-    def test_returns_chat_anthropic_instance(self):
+    def test_returns_chat_google_genai_instance(self):
         mock_llm = MagicMock()
-        with patch("utils.llm.ChatAnthropic", return_value=mock_llm) as mock_cls:
+        with patch("utils.llm.ChatGoogleGenerativeAI", return_value=mock_llm) as mock_cls:
             result = get_llm()
         assert result is mock_llm
         mock_cls.assert_called_once()
 
     def test_uses_env_model_when_set(self):
-        with patch("utils.llm.ChatAnthropic") as mock_cls, patch.dict("os.environ", {"LLM_MODEL": "claude-opus-4-6"}):
+        with patch("utils.llm.ChatGoogleGenerativeAI") as mock_cls, patch.dict("os.environ", {"LLM_MODEL": "gemini-2.0-pro"}):
             get_llm()
         call_kwargs = mock_cls.call_args[1]
-        assert call_kwargs["model"] == "claude-opus-4-6"
+        assert call_kwargs["model"] == "gemini-2.0-pro"
 
-    def test_defaults_to_claude_sonnet_when_env_unset(self):
-        env_without_model = {k: v for k, v in os.environ.items() if k != "LLM_MODEL"}
-        with patch("utils.llm.ChatAnthropic") as mock_cls, patch.dict("os.environ", env_without_model, clear=True):
+    def test_defaults_to_gemini_pro_when_env_unset(self):
+        env_without_model = {k: v for k, v in os.environ.items() if k not in ["LLM_MODEL", "LLM_MODEL_FAST"]}
+        with patch("utils.llm.ChatGoogleGenerativeAI") as mock_cls, patch.dict("os.environ", env_without_model, clear=True):
             get_llm()
         call_kwargs = mock_cls.call_args[1]
-        assert call_kwargs["model"] == "claude-sonnet-4-6"
+        assert call_kwargs["model"] == "gemini-2.5-pro"
+
+    def test_defaults_to_gemini_flash_for_analysis(self):
+        env_without_model = {k: v for k, v in os.environ.items() if k not in ["LLM_MODEL", "LLM_MODEL_FAST"]}
+        with patch("utils.llm.ChatGoogleGenerativeAI") as mock_cls, patch.dict("os.environ", env_without_model, clear=True):
+            get_llm(purpose="analysis")
+        call_kwargs = mock_cls.call_args[1]
+        assert call_kwargs["model"] == "gemini-2.5-flash"
 
     def test_uses_temperature_zero(self):
-        with patch("utils.llm.ChatAnthropic") as mock_cls:
+        with patch("utils.llm.ChatGoogleGenerativeAI") as mock_cls:
             get_llm()
         call_kwargs = mock_cls.call_args[1]
         assert call_kwargs["temperature"] == 0
