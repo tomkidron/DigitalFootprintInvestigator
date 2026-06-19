@@ -352,8 +352,72 @@ class TestSearchHibpBreachesNonEmail:
 
 
 # ---------------------------------------------------------------------------
+# check_gravatar_profile
+# ---------------------------------------------------------------------------
+
+class TestCheckGravatarProfile:
+    def test_returns_empty_on_invalid_email(self):
+        from tools.api_tools import check_gravatar_profile
+        assert check_gravatar_profile("notanemail") == ""
+
+    @patch("requests.get")
+    def test_returns_profile_on_200(self, mock_get):
+        from tools.api_tools import check_gravatar_profile
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_get.return_value = mock_response
+        result = check_gravatar_profile("test@example.com")
+        assert "Profile:" in result
+        assert "Avatar found" in result
+
+    @patch("requests.get")
+    def test_returns_empty_on_404(self, mock_get):
+        from tools.api_tools import check_gravatar_profile
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+        mock_get.return_value = mock_response
+        result = check_gravatar_profile("test@example.com")
+        assert result == ""
+
+# ---------------------------------------------------------------------------
+# check_wayback_machine
+# ---------------------------------------------------------------------------
+
+class TestCheckWaybackMachine:
+    @patch("requests.get")
+    def test_returns_snapshot_on_200(self, mock_get):
+        from tools.api_tools import check_wayback_machine
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "archived_snapshots": {
+                "closest": {
+                    "available": True,
+                    "url": "http://web.archive.org/web/20230101/http://example.com",
+                    "timestamp": "20230101120000"
+                }
+            }
+        }
+        mock_get.return_value = mock_response
+        result = check_wayback_machine("http://example.com")
+        assert "Historical Snapshot" in result
+        assert "2023-01-01" in result
+
+    @patch("requests.get")
+    def test_returns_empty_if_no_snapshot(self, mock_get):
+        from tools.api_tools import check_wayback_machine
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"archived_snapshots": {}}
+        mock_get.return_value = mock_response
+        result = check_wayback_machine("http://example.com")
+        assert result == ""
+
+
+# ---------------------------------------------------------------------------
 # enhanced_email_discovery
 # ---------------------------------------------------------------------------
+
 
 
 class TestEnhancedEmailDiscovery:
@@ -400,8 +464,9 @@ class TestEnhancedEmailDiscovery:
             return "[ERROR] No matches\n"
 
         with (
-            patch.dict("os.environ", {}, clear=True),
+            patch.dict("os.environ", {}),
             patch("tools.api_tools.search_hunter_emails", side_effect=capture_hunter),
+            patch("tools.api_tools.check_gravatar_profile", return_value=""),
         ):
             enhanced_email_discovery("John Doe")
 
@@ -418,8 +483,9 @@ class TestEnhancedEmailDiscovery:
             return "[ERROR] No matches\n"
 
         with (
-            patch.dict("os.environ", {}, clear=True),
+            patch.dict("os.environ", {}),
             patch("tools.api_tools.search_hunter_emails", side_effect=capture_hunter),
+            patch("tools.api_tools.check_gravatar_profile", return_value=""),
         ):
             enhanced_email_discovery("John Doe", domains=["example.com"])
 

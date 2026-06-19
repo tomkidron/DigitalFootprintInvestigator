@@ -2,10 +2,12 @@
 API tools for enhanced OSINT data collection
 """
 
+import hashlib
 import logging
 import os
 import re
 from typing import List
+from urllib.parse import quote
 
 import requests
 
@@ -46,6 +48,50 @@ def search_hibp_breaches(email: str) -> str:
 
     except Exception as e:
         return f"[ERROR] HIBP search error: {str(e)}\n"
+
+
+@cached(ttl=86400)
+@retry(max_attempts=2, delay=1)
+def check_gravatar_profile(email: str) -> str:
+    """Check Gravatar for an associated profile/avatar"""
+    if not is_valid_email(email):
+        return ""
+
+    email_hash = hashlib.md5(email.strip().lower().encode("utf-8")).hexdigest()
+    avatar_url = f"https://gravatar.com/avatar/{email_hash}?d=404"
+    profile_url = f"https://gravatar.com/{email_hash}"
+
+    try:
+        response = requests.get(avatar_url, timeout=5)
+        if response.status_code == 200:
+            return f"    - Profile: {profile_url} (Avatar found)\n"
+    except Exception as e:
+        logger.debug(f"Gravatar check failed for {email}: {str(e)}")
+
+    return ""
+
+
+@cached(ttl=86400)
+@retry(max_attempts=2, delay=1)
+def check_wayback_machine(url: str) -> str:
+    """Check Wayback Machine for historical snapshots"""
+    try:
+        api_url = f"https://archive.org/wayback/available?url={quote(url)}"
+        response = requests.get(api_url, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            snapshots = data.get("archived_snapshots", {})
+            closest = snapshots.get("closest")
+
+            if closest and closest.get("available"):
+                timestamp = closest.get("timestamp", "")
+                formatted_date = f"{timestamp[:4]}-{timestamp[4:6]}-{timestamp[6:8]}" if len(timestamp) >= 8 else timestamp
+                return f"  Historical Snapshot ({formatted_date}): {closest.get('url')}\n"
+    except Exception as e:
+        logger.debug(f"Wayback check failed for {url}: {str(e)}")
+
+    return ""
 
 
 def search_hunter_emails(domain: str, target_name: str) -> str:
@@ -126,7 +172,12 @@ def search_youtube_channel(target: str) -> str:
             output += f"    Subscribers: {stats.get('subscriberCount', 'Hidden')}\n"
             output += f"    Videos: {stats.get('videoCount', 0)}\n"
             output += f"    Views: {stats.get('viewCount', 0)}\n"
-            output += f"    URL: https://youtube.com/channel/{channel_id}\n\n"
+            channel_url = f"https://youtube.com/channel/{channel_id}"
+            output += f"    URL: {channel_url}\n"
+            wayback = check_wayback_machine(channel_url)
+            if wayback:
+                output += wayback
+            output += "\n"
 
         return output
 
@@ -161,7 +212,12 @@ def search_twitter_timeline(username: str) -> str:
             id=user_data.id, max_results=10, tweet_fields=["created_at", "public_metrics", "context_annotations"]
         )
 
+        profile_url = f"https://twitter.com/{user_data.username}"
         output = f"[OK] Found Twitter profile: @{user_data.username}\n"
+        output += f"  Profile URL: {profile_url}\n"
+        wayback = check_wayback_machine(profile_url)
+        if wayback:
+            output += wayback
         output += f"  Name: {user_data.name}\n"
         output += f"  Description: {user_data.description}\n"
         output += f"  Followers: {user_data.public_metrics['followers_count']}\n"
@@ -256,5 +312,16 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None, scan_m
             hibp_result = search_hibp_breaches(email)
             if "Found" in hibp_result:
                 output += hibp_result
+
+    # Method 4: Check Gravatar for discovered emails
+    if discovered_emails:
+        gravatar_results = ""
+        for email in discovered_emails:
+            g_res = check_gravatar_profile(email)
+            if g_res:
+                gravatar_results += f"  {email}:\n{g_res}"
+
+        if gravatar_results:
+            output += f"\nGravatar Profiles Found:\n{gravatar_results}"
 
     return output

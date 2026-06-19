@@ -8,7 +8,7 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
 - **Platform coverage**: Google (Tavily → SerpAPI → free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
-- **API enrichment**: HIBP breach detection, Hunter.io email discovery
+- **API enrichment**: HIBP breach detection, Hunter.io email discovery, Gravatar profile pictures, Wayback Machine historical snapshots
 - **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
 - **Input validation**: Sanitization and validation of all user inputs
 - **Streamlit web UI**: interactive interface with dual tabs (Investigate / Reports) for real-time log streaming and viewing saved reports inline

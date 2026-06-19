@@ -1,22 +1,18 @@
 # Feature Backlog
 
-## High Priority
+## Completed Features
 
 ### 1. Wayback Machine (Internet Archive)
-- **API**: archive.org/help/wayback_api.php
-- **Free tier**: Unlimited
+- **Status**: Implemented
 - **Use case**: Historical snapshots of social profiles, deleted posts, profile changes over time
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Low
 - **Value for individuals**: HIGH - see how profiles evolved, recover deleted content
 
 ### 2. Gravatar
-- **API**: Simple hash-based URL (no key needed)
-- **Free tier**: Unlimited
+- **Status**: Implemented
 - **Use case**: Get profile pictures from email addresses
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Very Low
 - **Value for individuals**: HIGH - visual identification from email
+
+## High Priority
 
 ### 3. FullContact
 - **API**: fullcontact.com/developer

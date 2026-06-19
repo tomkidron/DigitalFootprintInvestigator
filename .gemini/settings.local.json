@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source venv/Scripts/activate)",
+      "Bash(python -m pytest tests/unit/ -v --tb=short)",
+      "Bash(python -m pytest tests/unit/ -q)",
+      "Bash(python -c \":*)",
+      "Bash(python -m pytest tests/ui/ -m \"not integration\" -v --tb=short)",
+      "Bash(python -m pytest tests/ui/test_basic_flow.py::test_toggle_state_changes -v --tb=short)",
+      "Bash(npx -y @playwright/mcp@latest --version)",
+      "Bash(\"c:/Users/Tom Kidron/Documents/My:*)",
+      "Bash(wsl -d Ubuntu -- echo \"Ubuntu started OK\")",
+      "Bash(wsl --list --verbose)",
+      "Bash(wsl -d Ubuntu -- bash -c \"ls /mnt/wsl/docker-desktop/ 2>&1 && echo ''docker-desktop mount OK''\")",
+      "Bash(wsl -d Ubuntu -- bash -c \"cat /etc/wsl.conf 2>/dev/null || echo ''no wsl.conf''\")",
+      "Bash(docker info --format \"{{.ServerVersion}}\")",
+      "Bash(docker compose run --rm tests)",
+      "Bash(docker compose down --remove-orphans)",
+      "Bash(python3 -:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(python -c \"print\\(''ok''\\)\")",
+      "Bash(pre-commit run --all-files)",
+      "Bash(pip install ruff)",
+      "Bash(ruff check . --exclude venv,reports,.pytest_cache)",
+      "Bash(ruff --version)",
+      "Bash(ruff check . --exclude venv,reports,.pytest_cache --fix)",
+      "Bash(git commit:*)",
+      "Bash(detect-secrets scan --baseline .secrets.baseline)",
+      "Bash(git add tests/unit/test_api_tools.py .secrets.baseline)",
+      "Bash(git add -u)",
+      "Bash(git add tests/unit/test_api_tools.py)",
+      "Bash(git push origin main)",
+      "Bash(git add .mcp.json .claude/settings.json)",
+      "Bash(python -m pytest tests/unit/ -m \"not local_only\" -x --tb=short -q)"
+    ]
+  }
+}

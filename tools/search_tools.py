@@ -402,7 +402,14 @@ def _search_github(target: str, scan_mode: str = "advanced") -> str:
             except Exception:
                 output += "  Repository analysis: Limited access\n"
 
-        output += f"  Profile: {data.get('html_url')}\n"
+        profile_url = data.get('html_url')
+        output += f"  Profile: {profile_url}\n"
+
+        from tools.api_tools import check_wayback_machine
+        wayback = check_wayback_machine(profile_url)
+        if wayback:
+            output += wayback
+
         return output
 
     except Exception as e:
@@ -463,7 +470,14 @@ def _search_reddit(target: str) -> str:
         except Exception:
             output += "  Comment history: Access limited\n"
 
-        output += f"  Profile: https://reddit.com/user/{username}\n"
+        profile_url = f"https://reddit.com/user/{username}"
+        output += f"  Profile: {profile_url}\n"
+
+        from tools.api_tools import check_wayback_machine
+        wayback = check_wayback_machine(profile_url)
+        if wayback:
+            output += wayback
+
         return output
 
     except Exception as e:
