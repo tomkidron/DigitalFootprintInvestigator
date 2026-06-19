@@ -63,14 +63,15 @@ CRITICAL REPORTING ACCURACY:
 - If multiple subjects identified, clearly state analysis limitations for each
 - NEVER report an email address as a finding unless it is explicitly verified by HIBP or extracted verbatim from a real source snippet or API.
 - Do NOT use the tilde character (~) for approximations (e.g., use "approx. 50" instead of "~50") as multiple tildes cause unintended markdown strikethrough rendering.
+- FORMATTING CRITICAL: Do NOT use <br> or any HTML tags anywhere in the report. For newlines, use standard Markdown (double blank lines for new paragraphs, or two spaces at the end of a line for soft breaks).
 
 REPORT HEADER BLOCK (mandatory, immediately after the main # title):
 Immediately after the main `# OSINT Investigation Report: <target>` title line, include exactly this compact block — no extra text between the title and the block:
 
-**Classification:** Open Source Intelligence (OSINT) — Public Information Only<br>
-**Report Generation Date:** {current_date}<br>
-**Data Collection Date:** {current_date}<br>
-**Prepared By:** Automated OSINT Analysis System<br>
+**Classification:** Open Source Intelligence (OSINT) — Public Information Only  
+**Report Generation Date:** {current_date}  
+**Data Collection Date:** {current_date}  
+**Prepared By:** Automated OSINT Analysis System  
 **Distribution:** Authorized Recipients Only
 
 Report structure:

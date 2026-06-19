@@ -69,7 +69,7 @@ def get_saved_reports() -> list[Path]:
 
 def render_reports_page():
     """Render the saved reports browser page."""
-    st.title("📂 Saved Reports")
+    st.title("Saved Reports")
     st.markdown("Browse and open previously generated investigation reports.")
 
     report_files = get_saved_reports()
@@ -77,6 +77,13 @@ def render_reports_page():
     if not report_files:
         st.info("No reports found in the `reports/` folder yet. Run an investigation to generate one.")
         return
+
+    if "delete_confirm" not in st.session_state:
+        st.session_state.delete_confirm = False
+    if "delete_all_confirm" not in st.session_state:
+        st.session_state.delete_all_confirm = False
+    if "previous_selected_report" not in st.session_state:
+        st.session_state.previous_selected_report = None
 
     # Let the user pick a report
     report_names = [p.name for p in report_files]
@@ -87,21 +94,83 @@ def render_reports_page():
         help="Reports are sorted newest-first.",
     )
 
+    if st.session_state.previous_selected_report != selected_name:
+        st.session_state.previous_selected_report = selected_name
+        st.session_state.delete_confirm = False
+        st.session_state.delete_all_confirm = False
+
     selected_path = (Path("reports") / selected_name).resolve()
     if not str(selected_path).startswith(str(Path("reports").resolve())):
         raise ValueError(f"Invalid report path: {selected_path}")
-    with open(selected_path, "r", encoding="utf-8") as fh:
-        content = fh.read()
 
-    st.divider()
-    st.markdown(content)
-    st.divider()
-    st.download_button(
-        label="⬇️ Download Report",
-        data=content,
-        file_name=selected_name,
-        mime="text/markdown",
-    )
+    try:
+        with open(selected_path, "r", encoding="utf-8") as fh:
+            content = fh.read()
+    except Exception as e:
+        st.error(f"Error reading report: {e}")
+        return
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.download_button(
+            label="Download Report",
+            data=content,
+            file_name=selected_name,
+            mime="text/markdown",
+            key="btn_download_report",
+        )
+    with col2:
+        if st.button("Delete Selected Report", key="btn_delete_selected"):
+            st.session_state.delete_confirm = True
+            st.session_state.delete_all_confirm = False
+    with col3:
+        if st.button("Delete All Reports", key="btn_delete_all"):
+            st.session_state.delete_all_confirm = True
+            st.session_state.delete_confirm = False
+
+    if st.session_state.delete_confirm:
+        st.warning(f"Are you sure you want to delete {selected_name}?")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Yes, Delete", key="btn_confirm_delete_selected"):
+                try:
+                    selected_path.unlink()
+                    st.success(f"Deleted {selected_name}")
+                    st.session_state.delete_confirm = False
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error deleting file: {e}")
+        with col_c2:
+            if st.button("Cancel", key="btn_cancel_delete_selected"):
+                st.session_state.delete_confirm = False
+                st.rerun()
+
+    elif st.session_state.delete_all_confirm:
+        st.warning("Are you sure you want to delete ALL reports? This action cannot be undone.")
+        col_c1, col_c2 = st.columns(2)
+        with col_c1:
+            if st.button("Yes, Delete All", key="btn_confirm_delete_all"):
+                try:
+                    deleted_count = 0
+                    for rf in report_files:
+                        rf.unlink()
+                        deleted_count += 1
+                    st.success(f"Deleted {deleted_count} reports")
+                    st.session_state.delete_all_confirm = False
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error deleting files: {e}")
+        with col_c2:
+            if st.button("Cancel", key="btn_cancel_delete_all"):
+                st.session_state.delete_all_confirm = False
+                st.rerun()
+
+    if not st.session_state.delete_confirm and not st.session_state.delete_all_confirm:
+        st.divider()
+        st.markdown(content)
+        st.divider()
 
 
 def main():
