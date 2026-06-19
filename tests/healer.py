@@ -82,8 +82,8 @@ class SelfHealingPage:
         """
         import json
 
-        from langchain_google_genai import ChatGoogleGenerativeAI
         from langchain_core.messages import HumanMessage, SystemMessage
+        from langchain_google_genai import ChatGoogleGenerativeAI
 
         logger.info(f"Triggering AI healing for '{description}' (failed selector: {selector})")
 

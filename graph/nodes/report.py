@@ -35,6 +35,8 @@ def report_node(state):
     social_data = "\n".join(state.get("social_data", []))
     analysis = state.get("analysis", "")
     current_date = datetime.now().strftime("%B %d, %Y")
+    config = state.get("config", {})
+    scan_mode = config.get("scan_mode", "Advanced").capitalize()
 
     llm = get_llm()
 
@@ -74,6 +76,8 @@ Immediately after the main `# OSINT Investigation Report: <target>` title line, 
 
 **Data Collection Date:** {current_date}
 
+**Scan Mode:** {scan_mode}
+
 **Prepared By:** Automated OSINT Analysis System
 
 **Distribution:** Authorized Recipients Only
@@ -109,7 +113,7 @@ Format: Professional markdown report with all sources cited and analysis methods
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = "".join(c for c in target if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_")
-    filename = f"{safe_target}_{timestamp}.md"
+    filename = f"{safe_target}_{scan_mode}_{timestamp}.md"
     filepath = (output_dir / filename).resolve()
     if not str(filepath).startswith(str(output_dir.resolve())):
         raise ValueError(f"Invalid report path: {filepath}")

@@ -20,7 +20,10 @@ def test_ai_healing_flow(page):
                 content='{"suggested_selector": "button:has-text(\'Start Investigation\')", "reason": "matches description"}'
             )
 
-    with patch("langchain_google_genai.ChatGoogleGenerativeAI") as mock_chat, patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}):
+    with (
+        patch("langchain_google_genai.ChatGoogleGenerativeAI") as mock_chat,
+        patch.dict("os.environ", {"GEMINI_API_KEY": "dummy"}),
+    ):
         mock_instance = MagicMock()
         mock_instance.invoke.side_effect = side_effect
         mock_chat.return_value = mock_instance
