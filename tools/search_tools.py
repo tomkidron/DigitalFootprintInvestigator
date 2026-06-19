@@ -2,6 +2,7 @@
 Search tools for OSINT investigation
 """
 
+import concurrent.futures
 import logging
 import os
 import re
@@ -31,28 +32,35 @@ def google_search(query: str, scan_mode: str = "advanced") -> str:
     query = sanitize_target(query)
     logger.info(f"Google Search initiated for query: {query}")
 
-    try:
-        tavily_key = os.getenv("TAVILY_API_KEY") if scan_mode != "quick" else None
-        serpapi_key = os.getenv("SERPAPI_KEY") if scan_mode != "quick" else None
+    tavily_key = os.getenv("TAVILY_API_KEY") if scan_mode != "quick" else None
+    serpapi_key = os.getenv("SERPAPI_KEY") if scan_mode != "quick" else None
 
-        if tavily_key and tavily_key.strip():
-            logger.debug("Using Tavily for web search")
-            return _search_with_tavily(query, tavily_key, scan_mode=scan_mode)
-        elif serpapi_key and serpapi_key.strip():
-            logger.debug("Using SerpAPI for Google search")
-            return _search_with_serpapi(query, serpapi_key, scan_mode=scan_mode)
-        else:
-            logger.warning(
-                "TAVILY_API_KEY and SERPAPI_KEY not configured. Using fallback googlesearch library (limited reliability)."
-            )
-            result = _search_with_googlesearch(query)
-            if "error" in result.lower() or "not found" in result.lower():
-                logger.warning(f"Fallback search returned limited results for query: {query}")
+    # 1. Try Tavily
+    if tavily_key and tavily_key.strip():
+        logger.debug("Using Tavily for web search")
+        result = _search_with_tavily(query, tavily_key, scan_mode=scan_mode)
+        if "error" not in result.lower():
             return result
+        logger.warning(f"Tavily search failed or hit rate limit for query: {query}. Cascading to SerpAPI.")
 
-    except Exception as e:
-        logger.error(f"Google search error: {str(e)}", exc_info=True)
-        return f"Search error: {str(e)}"
+    # 2. Try SerpAPI
+    if serpapi_key and serpapi_key.strip():
+        logger.debug("Using SerpAPI for web search")
+        result = _search_with_serpapi(query, serpapi_key, scan_mode=scan_mode)
+        if "error" not in result.lower() and "[warn]" not in result.lower():
+            return result
+        logger.warning(f"SerpAPI search failed or hit rate limit for query: {query}. Cascading to Free Fallbacks.")
+
+    # 3. Try DuckDuckGo (Free, robust)
+    logger.debug("Using DuckDuckGo for free web search fallback")
+    result = _search_with_duckduckgo(query, scan_mode=scan_mode)
+    if "error" not in result.lower() and "[warn] no results" not in result.lower():
+        return result
+    logger.warning(f"DuckDuckGo search failed for query: {query}. Cascading to GoogleSearch.")
+
+    # 4. Try Googlesearch-python (Free, rate-limits easily)
+    logger.warning("Using basic googlesearch library (highly unreliable)")
+    return _search_with_googlesearch(query)
 
 
 def _search_with_serpapi(query: str, api_key: str, scan_mode: str = "advanced") -> str:
@@ -168,6 +176,37 @@ def _process_search_results(findings: list, query: str, provider: str, scan_mode
     return output
 
 
+def _search_with_duckduckgo(query: str, scan_mode: str = "advanced") -> str:
+    """Search using duckduckgo-python library (free, highly reliable)"""
+    try:
+        from duckduckgo_search import DDGS
+
+        logger.debug(f"DuckDuckGo request: {query}")
+        findings = []
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=10))
+            for result in results:
+                findings.append(
+                    {
+                        "title": result.get("title", ""),
+                        "link": result.get("href", ""),
+                        "snippet": result.get("body", ""),
+                    }
+                )
+
+        if not findings:
+            return f"\n[WARN] No results returned\n\nSearch Results for: {query}\n"
+
+        return _process_search_results(findings, query, provider="DuckDuckGo", scan_mode=scan_mode)
+
+    except ImportError:
+        logger.error("duckduckgo-search library not installed")
+        return "duckduckgo-search library not installed. Install with: pip install duckduckgo-search\n"
+    except Exception as e:
+        logger.error(f"DuckDuckGo search error: {str(e)}")
+        return f"DuckDuckGo search error: {str(e)}\n"
+
+
 def _search_with_googlesearch(query: str) -> str:
     """Search using googlesearch-python library (free, less reliable)"""
     try:
@@ -253,6 +292,80 @@ def _extract_identifiers(text: str) -> str:
     return "\n".join(identifiers) if identifiers else ""
 
 
+@cached(ttl=86400)
+def _get_wmn_data() -> dict:
+    """Fetch WhatsMyName JSON dataset"""
+    try:
+        url = "https://raw.githubusercontent.com/WebBreacher/WhatsMyName/main/wmn-data.json"
+        response = requests.get(url, timeout=10)
+        return response.json()
+    except Exception as e:
+        logger.debug(f"Failed to fetch WhatsMyName data: {e}")
+        return {}
+
+
+def _check_wmn_site(site: dict, username: str) -> str:
+    """Check a single site from WhatsMyName JSON"""
+    try:
+        check_uri = site.get("check_uri", "").replace("{account}", username)
+        if not check_uri:
+            return ""
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        }
+        response = requests.get(check_uri, headers=headers, timeout=5)
+
+        # Check logic based on WMN schema
+        if "account_existence_string" in site:
+            if site["account_existence_string"] in response.text:
+                return site["name"]
+        elif "account_missing_string" in site:
+            if site["account_missing_string"] not in response.text and response.status_code == int(
+                site.get("account_existence_code", 200)
+            ):
+                return site["name"]
+        elif response.status_code == int(site.get("account_existence_code", 200)):
+            return site["name"]
+
+    except Exception:
+        pass
+    return ""
+
+
+@cached(ttl=86400)
+def enumerate_username(username: str) -> str:
+    """Check a username across multiple platforms using WhatsMyName dataset"""
+    data = _get_wmn_data()
+    sites = data.get("sites", [])
+    if not sites:
+        return ""
+
+    # Limit to top 50 sites to ensure investigation speed
+    sites = sites[:50]
+
+    found_sites = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {executor.submit(_check_wmn_site, site, username): site for site in sites}
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result:
+                site_dict = futures[future]
+                profile_url = site_dict.get("uri_check", site_dict.get("url", "")).replace("{account}", username)
+                found_sites.append((result, profile_url))
+
+    if not found_sites:
+        return ""
+
+    output = f"[OK] Username Enumeration for '{username}' (WhatsMyName):\n"
+    for name, url in sorted(found_sites):
+        output += f"  - {name}: {url}\n"
+
+    return output
+
+
 def social_media_search(target: str, scan_mode: str = "advanced") -> str:
     """
     Searches across multiple social media platforms for profiles and activity.
@@ -272,6 +385,11 @@ def social_media_search(target: str, scan_mode: str = "advanced") -> str:
     platforms = ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]
     for platform in platforms:
         results.append(_search_platform(platform, target, scan_mode=scan_mode))
+
+    if " " not in target and "@" not in target:
+        wmn_result = enumerate_username(target)
+        if wmn_result:
+            results.append(wmn_result)
 
     return "\n".join(results)
 
@@ -402,10 +520,11 @@ def _search_github(target: str, scan_mode: str = "advanced") -> str:
             except Exception:
                 output += "  Repository analysis: Limited access\n"
 
-        profile_url = data.get('html_url')
+        profile_url = data.get("html_url")
         output += f"  Profile: {profile_url}\n"
 
         from tools.api_tools import check_wayback_machine
+
         wayback = check_wayback_machine(profile_url)
         if wayback:
             output += wayback
@@ -474,6 +593,7 @@ def _search_reddit(target: str) -> str:
         output += f"  Profile: {profile_url}\n"
 
         from tools.api_tools import check_wayback_machine
+
         wayback = check_wayback_machine(profile_url)
         if wayback:
             output += wayback

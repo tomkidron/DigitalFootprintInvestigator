@@ -355,14 +355,17 @@ class TestSearchHibpBreachesNonEmail:
 # check_gravatar_profile
 # ---------------------------------------------------------------------------
 
+
 class TestCheckGravatarProfile:
     def test_returns_empty_on_invalid_email(self):
         from tools.api_tools import check_gravatar_profile
+
         assert check_gravatar_profile("notanemail") == ""
 
     @patch("requests.get")
     def test_returns_profile_on_200(self, mock_get):
         from tools.api_tools import check_gravatar_profile
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
@@ -373,20 +376,24 @@ class TestCheckGravatarProfile:
     @patch("requests.get")
     def test_returns_empty_on_404(self, mock_get):
         from tools.api_tools import check_gravatar_profile
+
         mock_response = MagicMock()
         mock_response.status_code = 404
         mock_get.return_value = mock_response
         result = check_gravatar_profile("test@example.com")
         assert result == ""
 
+
 # ---------------------------------------------------------------------------
 # check_wayback_machine
 # ---------------------------------------------------------------------------
+
 
 class TestCheckWaybackMachine:
     @patch("requests.get")
     def test_returns_snapshot_on_200(self, mock_get):
         from tools.api_tools import check_wayback_machine
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -394,7 +401,7 @@ class TestCheckWaybackMachine:
                 "closest": {
                     "available": True,
                     "url": "http://web.archive.org/web/20230101/http://example.com",
-                    "timestamp": "20230101120000"
+                    "timestamp": "20230101120000",
                 }
             }
         }
@@ -406,6 +413,7 @@ class TestCheckWaybackMachine:
     @patch("requests.get")
     def test_returns_empty_if_no_snapshot(self, mock_get):
         from tools.api_tools import check_wayback_machine
+
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"archived_snapshots": {}}
@@ -415,9 +423,46 @@ class TestCheckWaybackMachine:
 
 
 # ---------------------------------------------------------------------------
-# enhanced_email_discovery
+# search_whoisxml
 # ---------------------------------------------------------------------------
 
+
+class TestSearchWhoisxml:
+    def test_returns_empty_when_key_missing(self):
+        with patch.dict("os.environ", {}, clear=True):
+            from tools.api_tools import search_whoisxml
+
+            result = search_whoisxml("example.com")
+        assert result == ""
+
+    @patch("requests.get")
+    def test_returns_data_on_200(self, mock_get):
+        from tools.api_tools import search_whoisxml
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "WhoisRecord": {
+                "contactEmail": "admin@example.com",
+                "registrant": {"organization": "Example Org", "name": "John Doe", "email": "john@example.com"},
+                "createdDate": "2000-01-01",
+            }
+        }
+        mock_get.return_value = mock_response
+        with patch.dict("os.environ", {"WHOISXML_API_KEY": "testkey"}):
+            result = search_whoisxml("example.com")
+
+        assert "Domain: example.com" in result
+        assert "admin@example.com" in result
+        assert "Example Org" in result
+        assert "John Doe" in result
+        assert "john@example.com" in result
+        assert "2000-01-01" in result
+
+
+# ---------------------------------------------------------------------------
+# enhanced_email_discovery
+# ---------------------------------------------------------------------------
 
 
 class TestEnhancedEmailDiscovery:

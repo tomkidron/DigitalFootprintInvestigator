@@ -406,6 +406,10 @@ def main():
             st.subheader("Investigation Report")
             st.markdown(st.session_state.report_content)
 
+            if st.session_state.log_buffer:
+                with st.expander("Investigation Logs (Debug)", expanded=False):
+                    st.code("\n".join(st.session_state.log_buffer), language="log")
+
             if st.session_state.latest_report_file:
                 file_name_dl = os.path.basename(st.session_state.latest_report_file)
             else:

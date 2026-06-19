@@ -479,27 +479,66 @@ class TestGoogleSearchPriority:
         mock_tavily.assert_called_once()
 
     @pytest.mark.local_only
-    @patch.dict("os.environ", {"SERPAPI_KEY": "srkey"})
-    @patch("os.getenv", side_effect=lambda k: "srkey" if k == "SERPAPI_KEY" else None)
+    @patch.dict("os.environ", {"TAVILY_API_KEY": "tvkey", "SERPAPI_KEY": "srkey"})
+    @patch("tools.search_tools._search_with_tavily")
     @patch("tools.search_tools._search_with_serpapi")
-    def test_uses_serpapi_if_tavily_missing(self, mock_serpapi, mock_env):
+    def test_cascades_to_serpapi_on_tavily_error(self, mock_serpapi, mock_tavily):
         from tools.search_tools import google_search
 
+        mock_tavily.return_value = "error limit reached"
         mock_serpapi.return_value = "SerpAPI Result"
         result = google_search("query")
         assert result == "SerpAPI Result"
+        mock_tavily.assert_called_once()
         mock_serpapi.assert_called_once()
 
     @pytest.mark.local_only
-    @patch("tools.search_tools._search_with_googlesearch")
-    @patch("os.getenv", return_value=None)
-    def test_falls_back_to_googlesearch(self, mock_env, mock_fallback):
+    @patch.dict("os.environ", {"TAVILY_API_KEY": "tvkey", "SERPAPI_KEY": "srkey"})
+    @patch("tools.search_tools._search_with_tavily")
+    @patch("tools.search_tools._search_with_serpapi")
+    @patch("tools.search_tools._search_with_duckduckgo")
+    def test_cascades_to_duckduckgo_on_all_errors(self, mock_ddg, mock_serpapi, mock_tavily):
         from tools.search_tools import google_search
 
-        mock_fallback.return_value = "Fallback Result"
+        mock_tavily.return_value = "error limit reached"
+        mock_serpapi.return_value = "[warn] timeout"
+        mock_ddg.return_value = "DuckDuckGo Result"
         result = google_search("query")
-        assert result == "Fallback Result"
-        mock_fallback.assert_called_once()
+        assert result == "DuckDuckGo Result"
+        mock_tavily.assert_called_once()
+        mock_serpapi.assert_called_once()
+        mock_ddg.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _search_with_duckduckgo
+# ---------------------------------------------------------------------------
+
+
+class TestSearchWithDuckDuckGo:
+    @patch("duckduckgo_search.DDGS")
+    def test_search_calls_ddgs_correctly(self, mock_ddgs_class):
+        from tools.search_tools import _search_with_duckduckgo
+
+        mock_ddgs_instance = MagicMock()
+        mock_ddgs_class.return_value.__enter__.return_value = mock_ddgs_instance
+        mock_ddgs_instance.text.return_value = [{"title": "T1", "href": "L1", "body": "S1"}]
+
+        with patch("tools.search_tools._process_search_results") as mock_process:
+            mock_process.return_value = "Mocked Output"
+            result = _search_with_duckduckgo("query")
+
+        mock_ddgs_instance.text.assert_called_once_with("query", max_results=10)
+        assert result == "Mocked Output"
+
+    @patch("duckduckgo_search.DDGS")
+    def test_handles_ddgs_exception(self, mock_ddgs_class):
+        from tools.search_tools import _search_with_duckduckgo
+
+        mock_ddgs_class.side_effect = Exception("API Error")
+
+        result = _search_with_duckduckgo("query")
+        assert "error" in result.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +588,47 @@ class TestSearchWithGooglesearch:
         with patch("googlesearch.search", return_value=iter([])):
             result = _search_with_googlesearch("John Doe")
         assert "SERPAPI_KEY" in result or "RECOMMENDATION" in result
+
+
+# ---------------------------------------------------------------------------
+# enumerate_username (WhatsMyName)
+# ---------------------------------------------------------------------------
+
+
+class TestEnumerateUsername:
+    @patch("tools.search_tools._get_wmn_data")
+    def test_returns_empty_when_no_data(self, mock_get_data):
+        from tools.search_tools import enumerate_username
+
+        mock_get_data.return_value = {}
+        result = enumerate_username("johndoe")
+        assert result == ""
+
+    @patch("tools.search_tools._get_wmn_data")
+    @patch("tools.search_tools._check_wmn_site")
+    def test_returns_found_sites(self, mock_check, mock_get_data):
+        from tools.search_tools import enumerate_username
+
+        mock_get_data.return_value = {
+            "sites": [
+                {"name": "Site1", "uri_check": "https://site1.com/{account}"},
+                {"name": "Site2", "uri_check": "https://site2.com/{account}"},
+            ]
+        }
+
+        # Site1 found, Site2 not found
+        def check_side_effect(site, username):
+            if site["name"] == "Site1":
+                return "Site1"
+            return ""
+
+        mock_check.side_effect = check_side_effect
+
+        result = enumerate_username("johndoe")
+
+        assert "WhatsMyName" in result
+        assert "Site1: https://site1.com/johndoe" in result
+        assert "Site2" not in result
 
 
 # ---------------------------------------------------------------------------

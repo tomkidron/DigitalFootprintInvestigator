@@ -12,15 +12,19 @@
 - **Use case**: Get profile pictures from email addresses
 - **Value for individuals**: HIGH - visual identification from email
 
-## High Priority
+### 3. WhatsMyName (Mass Username Enumeration)
+- **Status**: Implemented
+- **Use case**: Check discovered usernames across 50+ niche forums, dating sites, and obscure platforms simultaneously.
+- **Value for individuals**: VERY HIGH - Massive expansion of platform coverage with zero API costs.
 
-### 3. FullContact
-- **API**: fullcontact.com/developer
-- **Free tier**: 100 lookups/month
-- **Use case**: Enrich person data from email/phone/social profiles
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: HIGH - comprehensive person enrichment
+### 4. WhoisXML API (Domain Enrichment)
+- **Status**: Implemented
+- **Use case**: Check WHOIS records for custom domains to find alternate registrant emails or names.
+- **Value for individuals**: MEDIUM - Useful for uncovering alternate emails tied to domain registrations.
+
+---
+
+## High Priority (Identity & Core OSINT)
 
 ### 4. Telegram Search
 - **Library**: telethon (Python)
@@ -28,118 +32,74 @@
 - **Use case**: Search public Telegram channels/groups for mentions
 - **Implementation**: Add to `tools/search_tools.py`
 - **Effort**: High (requires session management)
-- **Value for individuals**: HIGH - Telegram is widely used, often overlooked
+- **Value for individuals**: HIGH - Telegram is a primary hub for many communities; often overlooked.
 
-### 5. Pipl
-- **API**: pipl.com/api
-- **Free tier**: Limited (requires approval)
-- **Use case**: Deep people search across web
+### 5. FullContact / Pipl
+- **API**: fullcontact.com/developer OR pipl.com/api
+- **Free tier**: Limited/Requires approval
+- **Use case**: Enrich person data (identity resolution) from an email, phone, or social profile.
 - **Implementation**: Add to `tools/api_tools.py`
 - **Effort**: Medium
-- **Value for individuals**: HIGH - specialized for person search
+- **Value for individuals**: HIGH - The holy grail of correlating identities and finding hidden social accounts.
 
-## Medium Priority
-
-### 6. Clearbit
-- **API**: clearbit.com/enrichment
-- **Free tier**: 100 lookups/month
-- **Use case**: Enrich email addresses with company/person info
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Low
-- **Value for individuals**: MEDIUM - good for professional context
-
-### 7. WhoisXML API
-- **API**: whoisxmlapi.com
-- **Free tier**: 500 queries/month
-- **Use case**: Domain registration info if person owns websites
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Low
-- **Value for individuals**: MEDIUM - useful if target has personal domain
-
-### 8. Dehashed
+### 6. Dehashed
 - **API**: dehashed.com/api
 - **Cost**: $5.49/month (cheaper alternative to HIBP)
-- **Use case**: Breach data search with more comprehensive data
+- **Use case**: Breach data search yielding cleartext passwords and IP addresses.
 - **Implementation**: Add to `tools/api_tools.py`
 - **Effort**: Low
-- **Value for individuals**: MEDIUM - more breach data than HIBP
+- **Value for individuals**: HIGH - Cleartext passwords frequently lead to discovering burner accounts via password reuse.
 
-## Low Priority (Infrastructure/Company-focused)
+---
 
-### 9. Shodan
-- **API**: shodan.io/api
-- **Free tier**: 100 queries/month
-- **Use case**: Find exposed devices/services (limited value for individuals)
+## Medium Priority (Enrichment & Pivoting)
+
+### 7. Reverse Image Search (PimEyes / TinEye / Google Lens)
+- **API**: pimeyes.com (paid) or SerpAPI Google Images (fallback)
+- **Use case**: Pivot from a discovered Gravatar or LinkedIn profile picture to find hidden social/dating profiles.
+- **Implementation**: Add to `tools/search_tools.py`
+- **Effort**: Medium
+- **Value for individuals**: MEDIUM/HIGH - Extremely powerful pivot vector for visual identification.
+
+### 8. Phone Number Enrichment (Numverify / Truecaller)
+- **API**: numverify.com or unofficial Truecaller APIs
+- **Use case**: Carrier lookup and Caller ID name resolution for extracted phone numbers.
 - **Implementation**: Add to `tools/api_tools.py`
 - **Effort**: Medium
-- **Value for individuals**: LOW - only useful if target has exposed infrastructure
+- **Value for individuals**: MEDIUM - Essential when a target uses a burner or unknown number.
 
-### 10. IPinfo
-- **API**: ipinfo.io
-- **Free tier**: 50k requests/month
-- **Use case**: Geolocate IPs (requires finding IPs first)
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Low
-- **Value for individuals**: LOW - secondary data source
+---
 
-### 11. VirusTotal
-- **API**: virustotal.com/api
-- **Free tier**: 4 requests/minute, 500/day
-- **Use case**: Check URLs/domains for malicious activity
+## Low Priority (Niche)
+
+### 10. Cryptocurrency Footprinting (Blockchain.com / Etherscan)
+- **API**: Various block explorers
+- **Free tier**: High limits
+- **Use case**: Check activity, balance, and transaction history if a BTC/ETH address is found in a profile or Reddit history.
 - **Implementation**: Add to `tools/api_tools.py`
 - **Effort**: Medium
-- **Value for individuals**: LOW - more relevant for threat intelligence
+- **Value for individuals**: LOW/NICHE - Very valuable only if the target operates in the crypto space.
 
-### 12. Spyse
-- **API**: spyse.com/api
-- **Free tier**: 100 queries/month
-- **Use case**: Find domains, IPs, SSL certificates
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: LOW - infrastructure-focused
-
-### 13. SecurityTrails
-- **API**: securitytrails.com/api
-- **Free tier**: 50 queries/month
-- **Use case**: Historical DNS records, subdomain enumeration
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: LOW - infrastructure-focused
+---
 
 ## Technical Improvements
 
-### 14. Async API Calls
-- **Use case**: Speed up parallel API calls within nodes
-- **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
-- **Effort**: High
-- **Note**: LangGraph already parallelizes nodes, but within-node calls are sequential
-
-### 15. Rate Limit Manager
-- **Use case**: Track and manage API quotas across all services
-- **Implementation**: Add `utils/rate_limiter.py`
-- **Effort**: Medium
-- **Note**: Currently relies on API errors and retry logic
-
-### 16. Export Formats
-- **Use case**: Export reports as JSON, PDF, HTML
+### 11. Export Formats
+- **Use case**: Export reports as JSON, PDF, HTML for clients and offline reading.
 - **Implementation**: Add export options to `graph/nodes/report.py`
 - **Effort**: Medium
 
-### 17. Scheduled Investigations
-- **Use case**: Monitor targets over time, detect changes
-- **Implementation**: Add scheduler with database for tracking
+### 12. Scheduled Investigations
+- **Use case**: Monitor targets over time and detect footprint changes (e.g., account deletions).
+- **Implementation**: Add scheduler with a database for tracking state.
 - **Effort**: High
 
-### 18. Web Scraping Fallbacks
-- **Use case**: Scrape platforms when APIs unavailable (Instagram, Facebook, LinkedIn)
-- **Implementation**: Add Playwright-based scrapers to `tools/search_tools.py`
-- **Effort**: Very High (maintenance burden, legal concerns)
-- **Note**: Playwright available for tests only
+### 13. Rate Limit Manager
+- **Use case**: Track and manage API quotas actively rather than relying purely on exception handling.
+- **Implementation**: Add `utils/rate_limiter.py`
+- **Effort**: Medium
 
-## Notes
-
-- All integrations should use `@cached` and `@retry` decorators
-- Add comprehensive error handling for each API
-- never Update `.env.example` with API keys! use fake or placeholders!
-- Update README with new service documentation
-- Add unit tests for each new integration
+### 14. Async API Calls
+- **Use case**: Speed up parallel API calls within individual LangGraph nodes.
+- **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
+- **Effort**: High

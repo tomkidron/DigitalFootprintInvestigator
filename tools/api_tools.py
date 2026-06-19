@@ -86,10 +86,65 @@ def check_wayback_machine(url: str) -> str:
 
             if closest and closest.get("available"):
                 timestamp = closest.get("timestamp", "")
-                formatted_date = f"{timestamp[:4]}-{timestamp[4:6]}-{timestamp[6:8]}" if len(timestamp) >= 8 else timestamp
+                formatted_date = (
+                    f"{timestamp[:4]}-{timestamp[4:6]}-{timestamp[6:8]}" if len(timestamp) >= 8 else timestamp
+                )
                 return f"  Historical Snapshot ({formatted_date}): {closest.get('url')}\n"
     except Exception as e:
         logger.debug(f"Wayback check failed for {url}: {str(e)}")
+
+    return ""
+
+
+@cached(ttl=86400)
+@retry(max_attempts=2, delay=1)
+def search_whoisxml(domain: str) -> str:
+    """Check WHOIS records for a custom domain using WhoisXML API"""
+    api_key = os.getenv("WHOISXML_API_KEY")
+    if not api_key:
+        return ""
+
+    try:
+        url = "https://www.whoisxmlapi.com/whoisserver/WhoisService"
+        params = {"apiKey": api_key, "domainName": domain, "outputFormat": "JSON"}
+
+        response = requests.get(url, params=params, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+            whois_record = data.get("WhoisRecord", {})
+
+            output = f"  Domain: {domain}\n"
+            has_data = False
+
+            contact_email = whois_record.get("contactEmail")
+            if contact_email:
+                output += f"    Contact Email: {contact_email}\n"
+                has_data = True
+
+            registrant = whois_record.get("registrant", {})
+            reg_org = registrant.get("organization")
+            reg_name = registrant.get("name")
+            reg_email = registrant.get("email")
+
+            if reg_org:
+                output += f"    Registrant Org: {reg_org}\n"
+                has_data = True
+            if reg_name:
+                output += f"    Registrant Name: {reg_name}\n"
+                has_data = True
+            if reg_email and reg_email != contact_email:
+                output += f"    Registrant Email: {reg_email}\n"
+                has_data = True
+
+            created = whois_record.get("createdDate")
+            if created:
+                output += f"    Creation Date: {created}\n"
+
+            if has_data:
+                return output + "\n"
+    except Exception as e:
+        logger.debug(f"WhoisXML search error for {domain}: {str(e)}")
 
     return ""
 
@@ -148,7 +203,7 @@ def search_youtube_channel(target: str) -> str:
     try:
         from googleapiclient.discovery import build
 
-        youtube = build("youtube", "v3", developerKey=api_key)
+        youtube = build("youtube", "v3", developerKey=api_key, cache_discovery=False)
 
         search_response = youtube.search().list(q=target, part="snippet", type="channel", maxResults=5).execute()
 
@@ -323,5 +378,17 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None, scan_m
 
         if gravatar_results:
             output += f"\nGravatar Profiles Found:\n{gravatar_results}"
+
+    # Method 5: WhoisXML for custom domains
+    whoisxml_key = os.getenv("WHOISXML_API_KEY") if scan_mode != "quick" else None
+    if whoisxml_key and domains:
+        whois_output = ""
+        for domain in domains:
+            if domain not in ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]:
+                whois_res = search_whoisxml(domain)
+                if whois_res:
+                    whois_output += whois_res
+        if whois_output:
+            output += f"\nDomain Enrichment Results (WhoisXML):\n{whois_output}"
 
     return output
