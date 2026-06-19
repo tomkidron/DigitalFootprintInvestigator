@@ -68,10 +68,14 @@ CRITICAL REPORTING ACCURACY:
 REPORT HEADER BLOCK (mandatory, immediately after the main # title):
 Immediately after the main `# OSINT Investigation Report: <target>` title line, include exactly this compact block — no extra text between the title and the block:
 
-**Classification:** Open Source Intelligence (OSINT) — Public Information Only  
-**Report Generation Date:** {current_date}  
-**Data Collection Date:** {current_date}  
-**Prepared By:** Automated OSINT Analysis System  
+**Classification:** Open Source Intelligence (OSINT) — Public Information Only
+
+**Report Generation Date:** {current_date}
+
+**Data Collection Date:** {current_date}
+
+**Prepared By:** Automated OSINT Analysis System
+
 **Distribution:** Authorized Recipients Only
 
 Report structure:

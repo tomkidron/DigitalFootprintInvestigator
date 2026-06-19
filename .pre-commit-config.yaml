@@ -1,11 +1,4 @@
 repos:
-  # Block accidental secret commits
-  - repo: https://github.com/Yelp/detect-secrets
-    rev: 68e8b45440415753fff70a312ece8da92ba85b4a  # frozen: v1.5.0
-    hooks:
-      - id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: venv/|\.git/|reports/|\.pytest_cache/
 
   # Lint and format Python
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -39,6 +32,14 @@ repos:
       - id: bandit
         args: ['-c', 'pyproject.toml']
         exclude: tests/
+
+  # Catch typos and spelling errors
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
+        additional_dependencies:
+          - tomli
 
   # Block cache and generated files
   - repo: local

@@ -292,7 +292,7 @@ def _search_platform(platform: str, target: str, scan_mode: str = "advanced") ->
     elif platform == "youtube":
         output += _search_youtube(target, scan_mode=scan_mode)
     elif platform in ["instagram", "facebook", "soundcloud"]:
-        output += f"[WARN] {platform.upper()}: Direct API not accessable. Using Google dork fallback.\n\n"
+        output += f"[WARN] {platform.upper()}: Direct API not accessible. Using Google dork fallback.\n\n"
         query = f'site:{platform}.com "{target}"'
         output += f"Search query: {query}\n\n"
         output += google_search(query, scan_mode=scan_mode)
