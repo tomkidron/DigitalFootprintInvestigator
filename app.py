@@ -102,40 +102,84 @@ def render_reports_page():
     selected_path = (Path("reports") / selected_name).resolve()
     if not str(selected_path).startswith(str(Path("reports").resolve())):
         raise ValueError(f"Invalid report path: {selected_path}")
+    base_path = selected_path.with_suffix("")
 
     try:
         with open(selected_path, "r", encoding="utf-8") as fh:
             content = fh.read()
+
+        json_path = base_path.with_suffix(".json")
+        html_path = base_path.with_suffix(".html")
+        pdf_path = base_path.with_suffix(".pdf")
+
+        json_content = json_path.read_text(encoding="utf-8") if json_path.exists() else ""
+        html_content = html_path.read_text(encoding="utf-8") if html_path.exists() else ""
+        pdf_content = pdf_path.read_bytes() if pdf_path.exists() else b""
     except Exception as e:
         st.error(f"Error reading report: {e}")
         return
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
+    st.markdown("### Download Options")
+    dl_col1, dl_col2, dl_col3, dl_col4 = st.columns(4)
+    with dl_col1:
         st.download_button(
-            label="Download Report",
+            label="📥 Markdown (.md)",
             data=content,
             file_name=selected_name,
             mime="text/markdown",
             key="btn_download_report",
         )
-    with col2:
+    with dl_col2:
+        if pdf_content:
+            st.download_button(
+                label="📥 PDF Document",
+                data=pdf_content,
+                file_name=f"{base_path.name}.pdf",
+                mime="application/pdf",
+                key="btn_download_pdf",
+            )
+    with dl_col3:
+        if html_content:
+            st.download_button(
+                label="📥 HTML Format",
+                data=html_content,
+                file_name=f"{base_path.name}.html",
+                mime="text/html",
+                key="btn_download_html",
+            )
+    with dl_col4:
+        if json_content:
+            st.download_button(
+                label="📥 JSON Data",
+                data=json_content,
+                file_name=f"{base_path.name}.json",
+                mime="application/json",
+                key="btn_download_json",
+            )
+
+    st.divider()
+
+    col1, col2 = st.columns(2)
+    with col1:
         if st.button("Delete Selected Report", key="btn_delete_selected"):
             st.session_state.delete_confirm = True
             st.session_state.delete_all_confirm = False
-    with col3:
+    with col2:
         if st.button("Delete All Reports", key="btn_delete_all"):
             st.session_state.delete_all_confirm = True
             st.session_state.delete_confirm = False
 
     if st.session_state.delete_confirm:
-        st.warning(f"Are you sure you want to delete {selected_name}?")
+        st.warning(f"Are you sure you want to delete {selected_name} and its associated formats?")
         col_c1, col_c2 = st.columns(2)
         with col_c1:
             if st.button("Yes, Delete", key="btn_confirm_delete_selected"):
                 try:
-                    selected_path.unlink()
-                    st.success(f"Deleted {selected_name}")
+                    for ext in [".md", ".json", ".html", ".pdf"]:
+                        p = base_path.with_suffix(ext)
+                        if p.exists():
+                            p.unlink()
+                    st.success(f"Deleted {selected_name} and associated formats")
                     st.session_state.delete_confirm = False
                     time.sleep(1)
                     st.rerun()
@@ -154,9 +198,13 @@ def render_reports_page():
                 try:
                     deleted_count = 0
                     for rf in report_files:
-                        rf.unlink()
+                        bp = rf.with_suffix("")
+                        for ext in [".md", ".json", ".html", ".pdf"]:
+                            p = bp.with_suffix(ext)
+                            if p.exists():
+                                p.unlink()
                         deleted_count += 1
-                    st.success(f"Deleted {deleted_count} reports")
+                    st.success(f"Deleted {deleted_count} reports and their associated formats")
                     st.session_state.delete_all_confirm = False
                     time.sleep(1)
                     st.rerun()
@@ -328,7 +376,8 @@ def main():
                     try:
                         app = create_workflow()
                         inputs = {"target": target_val, "config": config}
-                        thread_config = {"configurable": {"thread_id": f"web_{int(time.time())}"}}
+                        import uuid
+                        thread_config = {"configurable": {"thread_id": f"web_{uuid.uuid4()}"}}
                         result_holder["result"] = app.invoke(inputs, thread_config)
                     except Exception:
                         import traceback
@@ -412,11 +461,14 @@ def main():
 
             if st.session_state.latest_report_file:
                 file_name_dl = os.path.basename(st.session_state.latest_report_file)
+                st.info(
+                    "Report saved in multiple formats (PDF, JSON, HTML) in the `reports/` folder. Check the **Reports** tab to download them."
+                )
             else:
                 file_name_dl = "report.md"
 
             st.download_button(
-                label="Download Report",
+                label="Download Markdown Report",
                 data=st.session_state.report_content,
                 file_name=file_name_dl,
                 mime="text/markdown",

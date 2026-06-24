@@ -6,13 +6,31 @@ import urllib.request
 
 import pytest
 from playwright.sync_api import sync_playwright
+from unittest.mock import patch
+
+
+@pytest.fixture(autouse=True)
+def bypass_retry_sleep():
+    """Bypass time.sleep in the retry decorator during tests to avoid massive bottlenecks."""
+    with patch("utils.retry.time.sleep", return_value=None):
+        yield
 
 
 @pytest.fixture(scope="session")
-def streamlit_app():
+def streamlit_app(worker_id):
+    # Determine unique port per worker to avoid conflicts in xdist
+    base_port = 8502
+    if worker_id != "master":
+        try:
+            # worker_id is usually 'gw0', 'gw1', etc.
+            worker_num = int(worker_id.replace("gw", ""))
+            base_port += worker_num
+        except ValueError:
+            pass
+
     # If running in Docker (tests service), point to app-test service
     if os.path.exists("/.dockerenv"):
-        yield "http://app-test:8502"
+        yield f"http://app-test:{base_port}"
     else:
         # Path to venv python
         python_path = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")
@@ -21,13 +39,13 @@ def streamlit_app():
 
         # Start streamlit in the background
         proc = subprocess.Popen(
-            [python_path, "-m", "streamlit", "run", "app.py", "--server.port=8502", "--server.headless=true"],
+            [python_path, "-m", "streamlit", "run", "app.py", f"--server.port={base_port}", "--server.headless=true"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env={**os.environ},
         )
         # Poll health endpoint instead of sleeping blindly
-        health_url = "http://localhost:8502/_stcore/health"
+        health_url = f"http://localhost:{base_port}/_stcore/health"
         for attempt in range(30):
             try:
                 urllib.request.urlopen(health_url, timeout=1)
@@ -36,16 +54,15 @@ def streamlit_app():
                 time.sleep(1)
         else:
             proc.terminate()
-            raise RuntimeError("Streamlit did not start within 30 seconds")
-        yield "http://localhost:8502"
+            raise RuntimeError(f"Streamlit did not start on port {base_port} within 30 seconds")
+        yield f"http://localhost:{base_port}"
         proc.terminate()
 
 
-@pytest.fixture(scope="function")
-def page(streamlit_app):
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
-        page = browser.new_page()
-        page.goto(streamlit_app)
-        yield page
-        browser.close()
+@pytest.fixture
+def page(context, streamlit_app):
+    """Override pytest-playwright's page fixture to auto-navigate to the app."""
+    page = context.new_page()
+    page.goto(streamlit_app)
+    yield page
+    page.close()

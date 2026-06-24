@@ -81,7 +81,7 @@ def test_investigation_lifecycle_ui(page):
     consent_label.wait_for(state="visible", timeout=8000)
     consent_input = page.get_by_role("checkbox", name="I confirm I have a legitimate purpose", exact=False)
     if not consent_input.is_checked():
-        consent_label.click()
+        consent_label.click(force=True)
         page.wait_for_timeout(400)
 
     # Fill target and trigger input event

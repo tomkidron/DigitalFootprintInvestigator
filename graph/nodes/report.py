@@ -1,7 +1,11 @@
 """Report generation node for LangGraph workflow"""
 
+import json
 from datetime import datetime
 from pathlib import Path
+
+import markdown
+from xhtml2pdf import pisa
 
 from graph.nodes._timing import log_done, log_start
 from utils.llm import get_llm
@@ -113,15 +117,46 @@ Format: Professional markdown report with all sources cited and analysis methods
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_target = "".join(c for c in target if c.isalnum() or c in (" ", "-", "_")).strip().replace(" ", "_")
-    filename = f"{safe_target}_{scan_mode}_{timestamp}.md"
-    filepath = (output_dir / filename).resolve()
-    if not str(filepath).startswith(str(output_dir.resolve())):
-        raise ValueError(f"Invalid report path: {filepath}")
+    base_filename = f"{safe_target}_{scan_mode}_{timestamp}"
 
-    with open(filepath, "w", encoding="utf-8") as f:
+    # Paths for all formats
+    md_path = (output_dir / f"{base_filename}.md").resolve()
+    json_path = (output_dir / f"{base_filename}.json").resolve()
+    html_path = (output_dir / f"{base_filename}.html").resolve()
+    pdf_path = (output_dir / f"{base_filename}.pdf").resolve()
+
+    if not str(md_path).startswith(str(output_dir.resolve())):
+        raise ValueError(f"Invalid report path: {md_path}")
+
+    # 1. Save Markdown
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write(report)
 
+    # 2. Save JSON
+    report_data = {
+        "target": target,
+        "scan_mode": scan_mode,
+        "timestamp": timestamp,
+        "report_markdown": report,
+        "metadata": {"platforms_analyzed": actual_platforms},
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(report_data, f, indent=2)
+
+    # 3. Generate & Save HTML
+    html_content = markdown.markdown(report, extensions=["tables", "fenced_code"])
+    # Wrap in basic HTML structure for PDF rendering
+    full_html = f"<html><head><style>body {{ font-family: Helvetica, Arial, sans-serif; line-height: 1.4; }} h1, h2, h3 {{ color: #333; }} table {{ border-collapse: collapse; width: 100%; }} th, td {{ border: 1px solid #ddd; padding: 8px; }}</style></head><body>{html_content}</body></html>"
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(full_html)
+
+    # 4. Generate & Save PDF
+    with open(pdf_path, "wb") as f:
+        pisa_status = pisa.CreatePDF(full_html, dest=f)
+        if pisa_status.err:
+            print(f"Error generating PDF: {pisa_status.err}")
+
     log_done("Report generation", start)
-    print(f"Report saved: {filepath}")
+    print(f"Reports saved in {output_dir} with base name {base_filename}")
 
     return {"report": report}

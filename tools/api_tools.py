@@ -57,7 +57,7 @@ def check_gravatar_profile(email: str) -> str:
     if not is_valid_email(email):
         return ""
 
-    email_hash = hashlib.md5(email.strip().lower().encode("utf-8")).hexdigest()
+    email_hash = hashlib.md5(email.strip().lower().encode("utf-8"), usedforsecurity=False).hexdigest()
     avatar_url = f"https://gravatar.com/avatar/{email_hash}?d=404"
     profile_url = f"https://gravatar.com/{email_hash}"
 

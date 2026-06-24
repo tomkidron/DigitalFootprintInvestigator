@@ -22,6 +22,11 @@
 - **Use case**: Check WHOIS records for custom domains to find alternate registrant emails or names.
 - **Value for individuals**: MEDIUM - Useful for uncovering alternate emails tied to domain registrations.
 
+### 5. Export Formats
+- **Status**: Implemented
+- **Use case**: Export reports as JSON, PDF, HTML for clients and offline reading.
+- **Value for individuals**: HIGH - Essential for keeping records or sharing data externally.
+
 ---
 
 ## High Priority (Identity & Core OSINT)
@@ -83,11 +88,6 @@
 ---
 
 ## Technical Improvements
-
-### 11. Export Formats
-- **Use case**: Export reports as JSON, PDF, HTML for clients and offline reading.
-- **Implementation**: Add export options to `graph/nodes/report.py`
-- **Effort**: Medium
 
 ### 12. Scheduled Investigations
 - **Use case**: Monitor targets over time and detect footprint changes (e.g., account deletions).

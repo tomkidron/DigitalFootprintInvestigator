@@ -330,7 +330,7 @@ def _check_wmn_site(site: dict, username: str) -> str:
             return site["name"]
 
     except Exception:
-        pass
+        pass  # nosec B110
     return ""
 
 

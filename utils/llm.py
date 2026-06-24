@@ -12,5 +12,6 @@ def get_llm(purpose: str = "report"):
     else:
         model = os.getenv("LLM_MODEL", "gemini-2.5-pro")
 
-    llm = ChatGoogleGenerativeAI(model=model, temperature=0, max_retries=5)
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    llm = ChatGoogleGenerativeAI(model=model, temperature=0, max_retries=5, api_key=api_key)
     return llm.with_retry(stop_after_attempt=5)
