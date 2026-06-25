@@ -103,3 +103,8 @@
 - **Use case**: Speed up parallel API calls within individual LangGraph nodes.
 - **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
 - **Effort**: High
+
+### 15. Migrate to Next.js + FastAPI
+- **Use case**: Eliminate Streamlit state issues, support streaming logs natively, and create a premium frontend.
+- **Implementation**: See [docs/NEXTJS_MIGRATION.md](docs/NEXTJS_MIGRATION.md) for full architectural details.
+- **Effort**: High
