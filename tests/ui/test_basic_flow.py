@@ -1,23 +1,11 @@
 import pytest
+from playwright.sync_api import expect
 
 from tests.healer import SelfHealingPage
 
 
-def wait_for_streamlit(page, timeout=10000):
-    """Wait for Streamlit to finish its 'running' state."""
-    # Streamlit displays a spinner at the top right when running
-    # We can check for the presence of the 'running' status in the DOM.
-    # A more robust way is waiting for the progress bar to disappear.
-    try:
-        page.wait_for_selector("[data-testid='stStatusWidget']", state="hidden", timeout=timeout)
-    except Exception:
-        # Fallback to a small timeout if the selector logic is tricky
-        page.wait_for_timeout(1000)
-
-
 def test_app_loads(page):
     # Wait for Streamlit to update the title
-    page.wait_for_function("document.title.includes('Digital Footprint')", timeout=10000)
     title = page.title()
     print(f"DEBUG: Page Title is '{title}'")
     assert "Digital Footprint" in title
@@ -32,7 +20,6 @@ def test_app_loads(page):
 
 def test_investigation_input(page):
     h_page = SelfHealingPage(page)
-    wait_for_streamlit(page)
 
     # Fill target input
     # Note: Streamlit generates dynamic IDs, so we use description-based healing
@@ -68,7 +55,7 @@ def test_empty_input_validation(page):
 
     # Start button should be disabled
     start_btn = h_page.find_element("button:has-text('Start Investigation')", "Start Button")
-    assert start_btn.is_disabled(), "Start button should be disabled when input is empty"
+    expect(start_btn).to_be_disabled()
     print("✓ Successfully verified empty input disables Start button")
 
 
@@ -78,11 +65,10 @@ def test_investigation_lifecycle_ui(page):
 
     # Check consent first — required since the consent gate was added
     consent_label = page.locator("label:has-text('I confirm I have a legitimate purpose')")
-    consent_label.wait_for(state="visible", timeout=8000)
+    expect(consent_label).to_be_visible(timeout=8000)
     consent_input = page.get_by_role("checkbox", name="I confirm I have a legitimate purpose", exact=False)
     if not consent_input.is_checked():
         consent_label.click(force=True)
-        page.wait_for_timeout(400)
 
     # Fill target and trigger input event
     input_field = page.locator("input[aria-label='Target Identifier']")
@@ -91,20 +77,14 @@ def test_investigation_lifecycle_ui(page):
 
     # Wait for button to become enabled
     start_btn = page.locator("button:has-text('Start Investigation')")
-    for _ in range(10):
-        if not start_btn.is_disabled():
-            break
-        page.wait_for_timeout(500)
-    else:
-        raise AssertionError("Button did not become enabled after filling input")
+    expect(start_btn).to_be_enabled(timeout=10000)
 
     # Click start
     start_btn.click()
 
     # Verify stop button appears (replaces start button while running)
     stop_btn = h_page.find_element("button:has-text('Stop Investigation')", "Stop Button")
-    assert stop_btn is not None
-    assert not stop_btn.is_disabled()
+    expect(stop_btn).to_be_enabled()
 
     # Verify Logs expander appears
     logs = h_page.find_element("div[data-testid='stExpander']:has-text('Investigation Logs')", "Logs Expander")
@@ -115,15 +95,14 @@ def test_investigation_lifecycle_ui(page):
 def test_disclaimer_visible(page):
     """The EDUCATIONAL USE ONLY disclaimer must be rendered on page load."""
     disclaimer = page.get_by_text("EDUCATIONAL USE ONLY", exact=False)
-    disclaimer.wait_for(state="visible", timeout=8000)
-    assert disclaimer.is_visible()
+    expect(disclaimer).to_be_visible(timeout=8000)
     print("✓ Disclaimer is visible")
 
 
 def test_input_placeholder_text(page):
     """Target input must show the correct placeholder text."""
     target_input = page.locator("input[aria-label='Target Identifier']")
-    target_input.wait_for(state="visible", timeout=8000)
+    expect(target_input).to_be_visible(timeout=8000)
     placeholder = target_input.get_attribute("placeholder")
     assert placeholder == "Enter Name, Email, Username, or Phone Number..."
     print(f"✓ Placeholder text correct: '{placeholder}'")
@@ -134,8 +113,7 @@ def test_sidebar_info_text(page):
     info = page.locator("section[data-testid='stSidebar']").get_by_text(
         "Ensure you have set up your API keys", exact=False
     )
-    info.wait_for(state="visible", timeout=8000)
-    assert info.is_visible()
+    expect(info).to_be_visible(timeout=8000)
     print("✓ Sidebar API key info text is visible")
 
 
@@ -146,7 +124,7 @@ def test_whitespace_only_input(page):
     h_page.fill("input[aria-label='Target Identifier']", "   ", "Target Identifier Input")
 
     start_btn = h_page.find_element("button:has-text('Start Investigation')", "Start Button")
-    assert start_btn.is_disabled(), "Start button should be disabled for whitespace-only input"
+    expect(start_btn).to_be_disabled()
     print("✓ Whitespace-only input correctly disables button")
 
 
@@ -162,14 +140,13 @@ def test_toggle_state_changes(page):
         before = toggle_input.get_attribute("aria-checked")
         toggle_label.click()
 
-        # Poll for state change
-        for _ in range(10):
-            after = toggle_input.get_attribute("aria-checked")
-            if after != before:
-                break
-            page.wait_for_timeout(300)
+        # Streamlit toggles take a moment to update aria-checked
+        if before == "true":
+            expect(toggle_input).to_have_attribute("aria-checked", "false", timeout=5000)
         else:
-            raise AssertionError(f"Toggle '{label}' state did not change (stuck at '{before}')")
+            expect(toggle_input).to_have_attribute("aria-checked", "true", timeout=5000)
+
+        after = toggle_input.get_attribute("aria-checked")
 
         print(f"[OK] Toggle '{label}': {before} -> {after}")
 
@@ -177,16 +154,14 @@ def test_toggle_state_changes(page):
 def test_report_section_absent_on_initial_load(page):
     """Before any investigation is triggered the 'Investigation Report'
     heading and 'Download Report' button must NOT be present in the DOM."""
-    page.wait_for_function("document.title.includes('Digital Footprint')", timeout=10000)
-    page.wait_for_timeout(1000)  # let Streamlit finish initial render
 
     # Neither element should be visible in the main investigation area
     # Note: We use a more specific selector to avoid matching content in the 'Reports' tab
     report_heading = page.locator("[data-testid='stMain'] h3:has-text('Investigation Report')")
     download_btn = page.locator("[data-testid='stMain'] button:has-text('Download Report')")
 
-    assert not report_heading.is_visible(), "Report heading should not be visible on initial load"
-    assert not download_btn.is_visible(), "Download button should not be visible on initial load"
+    expect(report_heading).not_to_be_visible()
+    expect(download_btn).not_to_be_visible()
     print("[OK] Report section is correctly absent before any investigation")
 
 
@@ -194,71 +169,60 @@ def test_start_button_disabled_on_load(page):
     """The 'Start Investigation' button must be present but disabled on initial
     page load because the target identifier is empty."""
     start_btn = page.locator("button:has-text('Start Investigation')")
-    start_btn.wait_for(state="visible", timeout=8000)
-
-    assert start_btn.is_visible()
-    assert start_btn.is_disabled(), "Start button should be disabled on initial load (empty input)"
+    expect(start_btn).to_be_visible(timeout=8000)
+    expect(start_btn).to_be_disabled()
     print("[OK] Start Investigation button is correctly disabled on initial load")
 
 
 def test_config_header_visible(page):
     """The sidebar must display a 'Configuration' header."""
     config_header = page.locator("section[data-testid='stSidebar']").get_by_text("Configuration", exact=True)
-    config_header.wait_for(state="visible", timeout=8000)
-    assert config_header.is_visible()
+    expect(config_header).to_be_visible(timeout=8000)
     print("[OK] Configuration header is visible in the sidebar")
 
 
 def test_advanced_analysis_subheader_visible(page):
     """The sidebar must show the 'Advanced Analysis' subheader above the three toggles."""
     subheader = page.locator("section[data-testid='stSidebar']").get_by_text("Advanced Analysis", exact=False)
-    subheader.wait_for(state="visible", timeout=8000)
-    assert subheader.is_visible()
+    expect(subheader).to_be_visible(timeout=8000)
     print("[OK] Advanced Analysis subheader is visible in the sidebar")
 
 
 def test_title_visible(page):
     """The main page heading 'Digital Footprint Investigator' must be rendered."""
     heading = page.get_by_role("heading", name="Digital Footprint Investigator", exact=False)
-    heading.wait_for(state="visible", timeout=8000)
-    assert heading.is_visible()
+    expect(heading).to_be_visible(timeout=8000)
     print("[OK] Main page title is visible")
 
 
 def test_quick_scan_hides_advanced_options(page):
     """Selecting 'Quick' scan must hide the 'Advanced Analysis' section and its toggles."""
     subheader = page.locator("section[data-testid='stSidebar']").get_by_text("Advanced Analysis", exact=False)
-    subheader.wait_for(state="visible", timeout=8000)
-    assert subheader.is_visible()
+    expect(subheader).to_be_visible(timeout=8000)
 
     toggles = ["Timeline Correlation", "Social Connection Analysis", "Deep Content Analysis"]
     for label in toggles:
         toggle = page.locator(f"label:has-text('{label}')")
-        toggle.wait_for(state="visible", timeout=5000)
-        assert toggle.is_visible()
+        expect(toggle).to_be_visible(timeout=5000)
 
     # Select Quick Scan
     quick_radio = page.locator("label:has-text('Quick')")
     quick_radio.click()
-    page.wait_for_timeout(500)
 
     # Verify hidden
-    assert not subheader.is_visible()
+    expect(subheader).not_to_be_visible(timeout=5000)
     for label in toggles:
         toggle = page.locator(f"label:has-text('{label}')")
-        assert not toggle.is_visible()
+        expect(toggle).not_to_be_visible(timeout=5000)
 
     # Select Advanced Scan to restore
     advanced_radio = page.locator("label:has-text('Advanced')")
     advanced_radio.click()
-    page.wait_for_timeout(500)
 
     # Verify visible again
-    subheader.wait_for(state="visible", timeout=5000)
-    assert subheader.is_visible()
+    expect(subheader).to_be_visible(timeout=5000)
     for label in toggles:
         toggle = page.locator(f"label:has-text('{label}')")
-        toggle.wait_for(state="visible", timeout=5000)
-        assert toggle.is_visible()
+        expect(toggle).to_be_visible(timeout=5000)
 
     print("[OK] Quick Scan correctly hides Advanced Analysis options in the UI")

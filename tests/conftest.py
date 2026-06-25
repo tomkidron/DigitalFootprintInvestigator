@@ -18,7 +18,7 @@ def bypass_retry_sleep():
 @pytest.fixture(scope="session")
 def streamlit_app(worker_id):
     # Determine unique port per worker to avoid conflicts in xdist
-    base_port = 8502
+    base_port = 8600
     if worker_id != "master":
         try:
             # worker_id is usually 'gw0', 'gw1', etc.
@@ -62,7 +62,12 @@ def streamlit_app(worker_id):
 @pytest.fixture
 def page(context, streamlit_app):
     """Override pytest-playwright's page fixture to auto-navigate to the app."""
+    import re
+
+    from playwright.sync_api import expect
+
     page = context.new_page()
     page.goto(streamlit_app)
+    expect(page).to_have_title(re.compile("Digital Footprint"), timeout=30000)
     yield page
     page.close()

@@ -377,6 +377,7 @@ def main():
                         app = create_workflow()
                         inputs = {"target": target_val, "config": config}
                         import uuid
+
                         thread_config = {"configurable": {"thread_id": f"web_{uuid.uuid4()}"}}
                         result_holder["result"] = app.invoke(inputs, thread_config)
                     except Exception:

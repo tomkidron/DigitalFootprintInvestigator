@@ -2,25 +2,35 @@ import logging
 import os
 from typing import List
 
-from playwright.sync_api import ElementHandle, Page
+from playwright.sync_api import Locator, Page
 
 logger = logging.getLogger(__name__)
 
 
 class SelfHealingPage:
+    # Class-level cache for healed selectors across the test run
+    _healed_cache = {}
+
     def __init__(self, page: Page):
         self.page = page
 
-    def find_element(self, selector: str, description: str = "") -> ElementHandle:
+    def find_element(self, selector: str, description: str = "") -> Locator:
         """
         Attempts to find an element using the primary selector.
         If it fails, it tries fallback strategies and AI-based healing.
         """
+        # 0. Check cache
+        cache_key = f"{selector}::{description}"
+        if cache_key in self.__class__._healed_cache:
+            healed_selector = self.__class__._healed_cache[cache_key]
+            logger.info(f"Using cached healed selector: {healed_selector} for {cache_key}")
+            return self.page.locator(healed_selector)
+
         try:
             # 1. Primary Locator
-            element = self.page.wait_for_selector(selector, timeout=5000)
-            if element:
-                return element
+            locator = self.page.locator(selector).first
+            locator.wait_for(state="attached", timeout=5000)
+            return locator
         except Exception:
             logger.warning(f"Primary selector '{selector}' failed. Attempting healing...")
 
@@ -28,19 +38,23 @@ class SelfHealingPage:
         if "data-testid" not in selector:
             testid_selector = f"[data-testid='{selector.strip('#').strip('.')}']"
             try:
-                return self.page.wait_for_selector(testid_selector, timeout=2000)
+                locator = self.page.locator(testid_selector).first
+                locator.wait_for(state="attached", timeout=2000)
+                return locator
             except Exception:
                 pass
 
         # 3. Fallback: Text content (if description provided)
         if description:
             try:
-                return self.page.locator(f"text='{description}'").first.element_handle(timeout=2000)
+                locator = self.page.locator(f"text='{description}'").first
+                locator.wait_for(state="attached", timeout=2000)
+                return locator
             except Exception:
                 pass
 
         # 4. AI Healing (Simulation for now, call LLM if configured)
-        return self._ai_heal(selector, description)
+        return self._ai_heal(selector, description, cache_key)
 
     def _extract_dom_snapshot(self) -> List[dict]:
         """
@@ -76,7 +90,7 @@ class SelfHealingPage:
                 continue
         return snapshot
 
-    def _ai_heal(self, selector: str, description: str) -> ElementHandle:
+    def _ai_heal(self, selector: str, description: str, cache_key: str = None) -> Locator:
         """
         Uses an LLM to find the most likely element from a DOM snapshot.
         """
@@ -131,14 +145,19 @@ class SelfHealingPage:
             suggested_selector = result.get("suggested_selector")
             logger.info(f"AI suggested new selector: {suggested_selector} (Reason: {result.get('reason')})")
 
-            return self.page.wait_for_selector(suggested_selector, timeout=5000)
+            if cache_key:
+                self.__class__._healed_cache[cache_key] = suggested_selector
+
+            locator = self.page.locator(suggested_selector).first
+            locator.wait_for(state="attached", timeout=5000)
+            return locator
         except Exception as e:
             logger.error(f"AI healing failed: {str(e)}")
             raise Exception(f"Failed to find element '{selector}' even with AI healing logic. AI Error: {str(e)}")
 
     def click(self, selector: str, description: str = ""):
         element = self.find_element(selector, description)
-        element.click()
+        element.click(force=True)
 
     def fill(self, selector: str, value: str, description: str = ""):
         element = self.find_element(selector, description)
