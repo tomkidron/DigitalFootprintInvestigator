@@ -3,10 +3,9 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+from unittest.mock import patch
 
 import pytest
-from playwright.sync_api import sync_playwright
-from unittest.mock import patch
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +29,8 @@ def streamlit_app(worker_id):
 
     # If running in Docker (tests service), point to app-test service
     if os.path.exists("/.dockerenv"):
-        yield f"http://app-test:{base_port}"
+        # In docker-compose, there's only one app-test instance running on 8502
+        yield "http://app-test:8502"
     else:
         # Path to venv python
         python_path = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")
