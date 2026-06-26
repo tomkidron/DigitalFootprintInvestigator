@@ -42,9 +42,23 @@ repos:
         additional_dependencies:
           - tomli
 
+  # Format frontend code
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or: [javascript, jsx, ts, tsx, css]
+        exclude: frontend/package-lock\.json
+
   # Block cache and generated files
   - repo: local
     hooks:
+      - id: frontend-eslint
+        name: Frontend ESLint
+        entry: bash -c "cd frontend && npm run lint"
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: block-cache-files
         name: Block cache and generated files
         entry: 'bash -c "if git diff --cached --name-only | grep -E \"(\\.cache/|\\.ruff_cache/|__pycache__|/logs/.*\\.log$|/reports/.*\\.md$)\"; then echo \"ERROR: Attempting to commit cache/generated files. Add to .gitignore.\"; exit 1; fi"'
