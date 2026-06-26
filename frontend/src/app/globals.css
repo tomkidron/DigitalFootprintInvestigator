@@ -10,8 +10,8 @@
   --accent-hover: #5b92ee;
   --danger-color: #e5534b;
   --success-color: #34a853;
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
 }
 
 body {

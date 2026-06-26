@@ -16,7 +16,13 @@ export default function Home() {
   const [logs, setLogs] = useState<string[]>([]);
   const [currentReport, setCurrentReport] = useState<string | null>(null);
 
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<
+    {
+      name: string;
+      size: number;
+      created_at: number;
+    }[]
+  >([]);
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -27,13 +33,7 @@ export default function Home() {
     }
   }, [logs]);
 
-  useEffect(() => {
-    if (activeTab === "reports") {
-      fetchReports();
-    }
-  }, [activeTab]);
-
-  const fetchReports = async () => {
+  async function fetchReports() {
     try {
       const res = await fetch("http://localhost:8000/api/reports");
       if (res.ok) {
@@ -43,12 +43,21 @@ export default function Home() {
     } catch (e) {
       console.error("Failed to fetch reports", e);
     }
-  };
+  }
+
+  useEffect(() => {
+    if (activeTab === "reports") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchReports();
+    }
+  }, [activeTab]);
 
   const deleteReport = async (filename: string) => {
     if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
     try {
-      await fetch(`http://localhost:8000/api/reports/${filename}`, { method: "DELETE" });
+      await fetch(`http://localhost:8000/api/reports/${filename}`, {
+        method: "DELETE",
+      });
       fetchReports();
     } catch (e) {
       console.error("Failed to delete report", e);
@@ -67,18 +76,18 @@ export default function Home() {
         timeline_correlation: timeline,
         network_analysis: network,
         deep_content_analysis: deepContent,
-      }
+      },
     };
 
     try {
       const res = await fetch("http://localhost:8000/api/investigate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ target, config })
+        body: JSON.stringify({ target, config }),
       });
 
       if (!res.ok) {
-        setLogs(prev => [...prev, "Error: Failed to start investigation"]);
+        setLogs((prev) => [...prev, "Error: Failed to start investigation"]);
         setIsInvestigating(false);
         return;
       }
@@ -106,22 +115,26 @@ export default function Home() {
             if (dataStr) {
               try {
                 const data = JSON.parse(dataStr);
-                setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${data.content}`]);
+                setLogs((prev) => [
+                  ...prev,
+                  `[${new Date().toLocaleTimeString()}] ${data.content}`,
+                ]);
                 if (data.type === "done" || data.type === "error") {
                   setIsInvestigating(false);
                   if (data.report) {
                     setCurrentReport(data.report);
                   }
                 }
-              } catch (e) {
-                setLogs(prev => [...prev, dataStr]);
+              } catch {
+                setLogs((prev) => [...prev, dataStr]);
               }
             }
           }
         }
       }
-    } catch (e: any) {
-      setLogs(prev => [...prev, `Error: ${e.message}`]);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setLogs((prev) => [...prev, `Error: ${msg}`]);
       setIsInvestigating(false);
     }
   };
@@ -153,18 +166,28 @@ export default function Home() {
           <div>
             <div className="card">
               <div style={{ marginBottom: "1.5rem" }}>
-                <p style={{ fontSize: "0.875rem", color: "var(--danger-color)", fontWeight: 500, marginBottom: "1rem" }}>
-                  EDUCATIONAL USE ONLY: This tool is designed for educational purposes, security research, and legitimate OSINT investigations.
+                <p
+                  style={{
+                    fontSize: "0.875rem",
+                    color: "var(--danger-color)",
+                    fontWeight: 500,
+                    marginBottom: "1rem",
+                  }}
+                >
+                  EDUCATIONAL USE ONLY: This tool is designed for educational
+                  purposes, security research, and legitimate OSINT
+                  investigations.
                 </p>
                 <div className="checkbox-group">
                   <input
                     type="checkbox"
                     id="consent"
                     checked={consent}
-                    onChange={e => setConsent(e.target.checked)}
+                    onChange={(e) => setConsent(e.target.checked)}
                   />
                   <label htmlFor="consent" style={{ fontSize: "0.875rem" }}>
-                    I confirm I have a legitimate purpose and will comply with all applicable laws and Terms of Service.
+                    I confirm I have a legitimate purpose and will comply with
+                    all applicable laws and Terms of Service.
                   </label>
                 </div>
               </div>
@@ -177,7 +200,7 @@ export default function Home() {
                     id="target"
                     placeholder="Enter Name, Email, Username, or Phone Number..."
                     value={target}
-                    onChange={e => setTarget(e.target.value)}
+                    onChange={(e) => setTarget(e.target.value)}
                     disabled={isInvestigating}
                     aria-label="Target Identifier"
                   />
@@ -193,10 +216,14 @@ export default function Home() {
             </div>
 
             <div className="card">
-              <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem" }}>Investigation Logs</h3>
+              <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem" }}>
+                Investigation Logs
+              </h3>
               <div className="log-console" data-testid="stExpander">
                 {logs.length === 0 ? (
-                  <span style={{ color: "var(--text-secondary)" }}>Waiting to start...</span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    Waiting to start...
+                  </span>
                 ) : (
                   logs.map((log, i) => <div key={i}>{log}</div>)
                 )}
@@ -206,8 +233,25 @@ export default function Home() {
 
             {currentReport && (
               <div className="card" style={{ marginTop: "1.5rem" }}>
-                <h3 style={{ marginBottom: "1rem", fontSize: "1.125rem", borderBottom: "1px solid var(--border-color)", paddingBottom: "0.5rem" }}>Investigation Report</h3>
-                <div data-testid="stMain" style={{ backgroundColor: "var(--bg-primary)", padding: "1.5rem", borderRadius: "6px", border: "1px solid var(--border-color)" }}>
+                <h3
+                  style={{
+                    marginBottom: "1rem",
+                    fontSize: "1.125rem",
+                    borderBottom: "1px solid var(--border-color)",
+                    paddingBottom: "0.5rem",
+                  }}
+                >
+                  Investigation Report
+                </h3>
+                <div
+                  data-testid="stMain"
+                  style={{
+                    backgroundColor: "var(--bg-primary)",
+                    padding: "1.5rem",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                  }}
+                >
                   <ReactMarkdown>{currentReport}</ReactMarkdown>
                 </div>
               </div>
@@ -215,7 +259,9 @@ export default function Home() {
           </div>
 
           <div className="sidebar" data-testid="stSidebar">
-            <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>Configuration</h2>
+            <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>
+              Configuration
+            </h2>
 
             <div className="input-group">
               <label>Scan Mode</label>
@@ -246,24 +292,32 @@ export default function Home() {
             {scanMode === "advanced" && (
               <>
                 <div className="divider"></div>
-                <h3 style={{ fontSize: "1rem", marginBottom: "1rem" }}>Advanced Analysis</h3>
+                <h3 style={{ fontSize: "1rem", marginBottom: "1rem" }}>
+                  Advanced Analysis
+                </h3>
 
-                <div className="checkbox-group" style={{ marginBottom: "1rem" }}>
+                <div
+                  className="checkbox-group"
+                  style={{ marginBottom: "1rem" }}
+                >
                   <input
                     type="checkbox"
                     id="timeline"
                     checked={timeline}
-                    onChange={e => setTimeline(e.target.checked)}
+                    onChange={(e) => setTimeline(e.target.checked)}
                   />
                   <label htmlFor="timeline">Timeline Correlation</label>
                 </div>
 
-                <div className="checkbox-group" style={{ marginBottom: "1rem" }}>
+                <div
+                  className="checkbox-group"
+                  style={{ marginBottom: "1rem" }}
+                >
                   <input
                     type="checkbox"
                     id="network"
                     checked={network}
-                    onChange={e => setNetwork(e.target.checked)}
+                    onChange={(e) => setNetwork(e.target.checked)}
                   />
                   <label htmlFor="network">Social Connection Analysis</label>
                 </div>
@@ -273,7 +327,7 @@ export default function Home() {
                     type="checkbox"
                     id="deepContent"
                     checked={deepContent}
-                    onChange={e => setDeepContent(e.target.checked)}
+                    onChange={(e) => setDeepContent(e.target.checked)}
                   />
                   <label htmlFor="deepContent">Deep Content Analysis</label>
                 </div>
@@ -281,9 +335,17 @@ export default function Home() {
             )}
 
             <div className="divider"></div>
-            <div style={{ padding: "1rem", backgroundColor: "rgba(63, 125, 232, 0.1)", borderRadius: "6px", border: "1px solid rgba(63, 125, 232, 0.2)" }}>
+            <div
+              style={{
+                padding: "1rem",
+                backgroundColor: "rgba(63, 125, 232, 0.1)",
+                borderRadius: "6px",
+                border: "1px solid rgba(63, 125, 232, 0.2)",
+              }}
+            >
               <p style={{ fontSize: "0.875rem", color: "var(--accent-hover)" }}>
-                Ensure you have set up your API keys in .env for full functionality.
+                Ensure you have set up your API keys in .env for full
+                functionality.
               </p>
             </div>
           </div>
@@ -292,7 +354,9 @@ export default function Home() {
 
       {activeTab === "reports" && (
         <div className="card">
-          <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>Saved Reports</h2>
+          <h2 style={{ fontSize: "1.25rem", marginBottom: "1.5rem" }}>
+            Saved Reports
+          </h2>
           {reports.length === 0 ? (
             <p style={{ color: "var(--text-secondary)" }}>No reports found.</p>
           ) : (
@@ -301,16 +365,83 @@ export default function Home() {
                 <div key={report.name} className="report-item">
                   <div>
                     <strong>{report.name}</strong>
-                    <div style={{ fontSize: "0.875rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
-                      {(report.size / 1024).toFixed(2)} KB • {new Date(report.created_at * 1000).toLocaleString()}
+                    <div
+                      style={{
+                        fontSize: "0.875rem",
+                        color: "var(--text-secondary)",
+                        marginTop: "0.25rem",
+                      }}
+                    >
+                      {(report.size / 1024).toFixed(2)} KB •{" "}
+                      {new Date(report.created_at * 1000).toLocaleString()}
                     </div>
                   </div>
                   <div className="report-actions">
-                    <a href={`http://localhost:8000/api/reports/${report.name.replace(".md", ".pdf")}`} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.875rem" }}>PDF</a>
-                    <a href={`http://localhost:8000/api/reports/${report.name.replace(".md", ".html")}`} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.875rem" }}>HTML</a>
-                    <a href={`http://localhost:8000/api/reports/${report.name.replace(".md", ".json")}`} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.875rem" }}>JSON</a>
-                    <a href={`http://localhost:8000/api/reports/${report.name}`} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.875rem" }}>MD</a>
-                    <button className="btn btn-danger" style={{ padding: "0.25rem 0.5rem", fontSize: "0.875rem" }} onClick={() => deleteReport(report.name)}>
+                    <a
+                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                        ".md",
+                        ".pdf",
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      PDF
+                    </a>
+                    <a
+                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                        ".md",
+                        ".html",
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      HTML
+                    </a>
+                    <a
+                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                        ".md",
+                        ".json",
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      JSON
+                    </a>
+                    <a
+                      href={`http://localhost:8000/api/reports/${report.name}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      MD
+                    </a>
+                    <button
+                      className="btn btn-danger"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                      }}
+                      onClick={() => deleteReport(report.name)}
+                    >
                       Delete
                     </button>
                   </div>
