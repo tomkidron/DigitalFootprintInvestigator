@@ -5,11 +5,11 @@ Unit tests for helper functions in app.py
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from app import get_saved_reports
+from api.main import get_saved_reports
 
 
 class TestGetSavedReports:
-    @patch("app.Path.exists", return_value=True)
+    @patch("api.main.Path.exists", return_value=True)
     def test_get_saved_reports_filters_out_traversal(self, mock_exists):
         reports_dir = Path("reports").resolve()
 
@@ -18,7 +18,7 @@ class TestGetSavedReports:
 
         mock_glob = MagicMock(return_value=[valid_path, traversal_path])
 
-        with patch("app.Path.glob", mock_glob), patch("app.Path.stat") as mock_stat:
+        with patch("api.main.Path.glob", mock_glob), patch("api.main.Path.stat") as mock_stat:
             mock_stat.return_value.st_mtime = 12345
             results = get_saved_reports()
 

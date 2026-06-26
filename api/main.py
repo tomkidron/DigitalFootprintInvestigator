@@ -32,7 +32,14 @@ def get_saved_reports() -> list[Path]:
     reports_dir = Path("reports").resolve()
     if not reports_dir.exists():
         return []
-    files = sorted(reports_dir.glob("*.md"), key=lambda p: p.stat().st_mtime, reverse=True)
+        
+    valid_files = []
+    for p in reports_dir.glob("*.md"):
+        # Resolve both and check if it's strictly within reports_dir
+        if str(p.resolve()).startswith(str(reports_dir)):
+            valid_files.append(p)
+            
+    files = sorted(valid_files, key=lambda p: p.stat().st_mtime, reverse=True)
     return files
 
 
