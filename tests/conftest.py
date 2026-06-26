@@ -16,7 +16,7 @@ def bypass_retry_sleep():
 
 
 @pytest.fixture(scope="session")
-def streamlit_app(worker_id):
+def fastapi_app(worker_id):
     # Determine unique port per worker to avoid conflicts in xdist
     base_port = 8600
     if worker_id != "master":
@@ -29,23 +29,32 @@ def streamlit_app(worker_id):
 
     # If running in Docker (tests service), point to app-test service
     if os.path.exists("/.dockerenv"):
-        # In docker-compose, there's only one app-test instance running on 8502
-        yield "http://app-test:8502"
+        # In docker-compose, there's only one app-test instance running on 8000
+        yield "http://app-test:8000"
     else:
+        # Build frontend first so static files exist
+        if not os.path.exists(os.path.join("frontend", "out")):
+            print("Building Next.js frontend for tests...")
+            # Note: requires npm to be in PATH
+            try:
+                subprocess.run(["npm", "run", "build"], cwd="frontend", check=True, shell=True)
+            except Exception as e:
+                print(f"Failed to build frontend: {e}")
+
         # Path to venv python
         python_path = os.path.join(os.getcwd(), "venv", "Scripts", "python.exe")
         if not os.path.exists(python_path):
             python_path = "python"  # Fallback
 
-        # Start streamlit in the background
+        # Start FastAPI in the background
         proc = subprocess.Popen(
-            [python_path, "-m", "streamlit", "run", "app.py", f"--server.port={base_port}", "--server.headless=true"],
+            [python_path, "-m", "uvicorn", "api.main:app", "--port", str(base_port)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env={**os.environ},
         )
         # Poll health endpoint instead of sleeping blindly
-        health_url = f"http://localhost:{base_port}/_stcore/health"
+        health_url = f"http://localhost:{base_port}/api/reports"
         for attempt in range(30):
             try:
                 urllib.request.urlopen(health_url, timeout=1)
@@ -54,20 +63,20 @@ def streamlit_app(worker_id):
                 time.sleep(1)
         else:
             proc.terminate()
-            raise RuntimeError(f"Streamlit did not start on port {base_port} within 30 seconds")
+            raise RuntimeError(f"FastAPI did not start on port {base_port} within 30 seconds")
         yield f"http://localhost:{base_port}"
         proc.terminate()
 
 
 @pytest.fixture
-def page(context, streamlit_app):
+def page(context, fastapi_app):
     """Override pytest-playwright's page fixture to auto-navigate to the app."""
     import re
 
     from playwright.sync_api import expect
 
     page = context.new_page()
-    page.goto(streamlit_app)
+    page.goto(fastapi_app)
     expect(page).to_have_title(re.compile("Digital Footprint"), timeout=30000)
     yield page
     page.close()

@@ -11,7 +11,7 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery, Gravatar profile pictures, Wayback Machine historical snapshots
 - **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
 - **Input validation**: Sanitization and validation of all user inputs
-- **Streamlit web UI**: interactive interface with dual tabs (Investigate / Reports) for real-time log streaming and viewing saved reports inline
+- **Next.js & FastAPI web UI**: decoupled modern architecture with a Next.js static React frontend and a FastAPI backend for real-time SSE log streaming and report management
 - **CLI mode**: scriptable via `python main.py`
 - **Advanced analysis** (optional): timeline correlation, social connection analysis, deep content analysis
 - **Scan Modes**: choose between **Quick Scan** (free, unauthenticated fallbacks only) and **Advanced Scan** (premium integrations using configured API keys)
@@ -35,7 +35,7 @@ cp .env.example .env   # then edit .env and set GEMINI_API_KEY
 docker compose up --build
 ```
 
-Open `http://localhost:8501` in your browser.
+Open `http://localhost:8000` in your browser.
 
 **CLI via Docker:**
 ```bash
@@ -53,8 +53,13 @@ pip install -r requirements.txt
 # Copy and configure environment
 cp .env.example .env   # then edit .env
 
-# Start the web UI
-streamlit run app.py
+# Start the backend (FastAPI)
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+# Start the frontend development server (Next.js)
+cd frontend
+npm install
+npm run dev
 
 # Or use the CLI
 python main.py "John Doe"
@@ -128,7 +133,11 @@ DigitalFootprintInvestigator/
 │   ├── healer.py             # Self-healing Playwright page wrapper
 │   ├── unit/                 # 215 unit tests (no browser or live API required)
 │   └── ui/                   # 25 Playwright browser tests
-├── app.py                    # Streamlit web UI
+├── api/
+│   └── main.py               # FastAPI backend entry point
+├── frontend/
+│   ├── src/app/              # Next.js app router and components
+│   └── package.json          # Node dependencies
 ├── main.py                   # CLI entry point
 ├── config.yaml               # Platform and analysis settings
 ├── pytest.ini                # Test markers and paths
@@ -149,7 +158,7 @@ DigitalFootprintInvestigator/
 # Unit tests (no browser, no API key needed)
 python -m pytest tests/unit/ -v
 
-# UI tests (starts Streamlit automatically; requires a Playwright browser)
+# UI tests (starts FastAPI + Next.js automatically; requires a Playwright browser)
 playwright install chromium   # first time only
 python -m pytest tests/ui/ -m "not integration" -v
 
@@ -269,7 +278,7 @@ workflow.add_edge("analysis", "my_node")
 
 **Google searches return no results** — the free `googlesearch-python` library is rate-limited and unreliable. Add `TAVILY_API_KEY` or `SERPAPI_KEY` to `.env` for consistent results (Tavily is tried first, then SerpAPI, then the free fallback).
 
-**Page refresh hangs in Docker on Windows** — Streamlit’s file watcher conflicts with Docker volume mounts. `fileWatcherType = "none"` is set in `.streamlit/config.toml`; restore it if it gets removed.
+**Page refresh hangs in Docker on Windows** — Streamlit's file watcher was previously problematic. With the new Next.js migration, if `uvicorn` or Next.js hangs, verify your Docker Volume mounts and file watching permissions.
 
 **`Module not found`** — run `pip install -r requirements.txt` and confirm Python 3.11+.
 

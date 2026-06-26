@@ -17,8 +17,11 @@ google-api-python-client>=2.100.0
 # New API dependencies
 tweepy>=4.14.0  # Twitter API v2
 
-# UI Dependencies
-streamlit>=1.30.0
+# API Dependencies
+fastapi>=0.100.0
+uvicorn>=0.23.0
+sse-starlette>=1.6.0
+python-multipart>=0.0.6
 
 # Testing Dependencies
 pytest-playwright>=0.4.0

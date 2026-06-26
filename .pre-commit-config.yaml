@@ -38,6 +38,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
+        exclude: package-lock\.json
         additional_dependencies:
           - tomli
 
