@@ -313,7 +313,7 @@ class TestAnalysisNode:
         with patch("graph.nodes.analysis.get_llm", return_value=mock_llm):
             analysis_node(self._make_state())
         prompt = mock_llm.invoke.call_args[0][0]
-        assert "John Doe" in prompt
+        assert "John Doe" in prompt[1].content
 
     def test_handles_empty_google_and_social_data(self):
         from graph.nodes.analysis import analysis_node
@@ -332,8 +332,8 @@ class TestAnalysisNode:
         with patch("graph.nodes.analysis.get_llm", return_value=mock_llm):
             analysis_node(self._make_state(google=["part1", "part2"]))
         prompt = mock_llm.invoke.call_args[0][0]
-        assert "part1" in prompt
-        assert "part2" in prompt
+        assert "part1" in prompt[1].content
+        assert "part2" in prompt[1].content
 
 
 # ---------------------------------------------------------------------------

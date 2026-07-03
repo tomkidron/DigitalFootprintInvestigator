@@ -295,6 +295,65 @@ def search_twitter_timeline(username: str) -> str:
         return f"[ERROR] Twitter search error: {str(e)}\n"
 
 
+@cached(ttl=3600)
+@retry(max_attempts=2, delay=2)
+def search_telegram_channels(target: str) -> str:
+    """Search Telegram for public channels/groups and users matching the target"""
+    target = sanitize_target(target)
+    api_id = os.getenv("TELEGRAM_API_ID")
+    api_hash = os.getenv("TELEGRAM_API_HASH")
+
+    if not api_id or not api_hash:
+        return "[ERROR] Telegram API ID/Hash not configured\n"
+
+    try:
+        from telethon.sync import TelegramClient
+        from telethon.tl.functions.contacts import SearchRequest
+
+        # Use a consistent session name in the project root
+        session_path = os.path.join(os.getcwd(), "anon")
+
+        output = f"[OK] Found Telegram results for: {target}\n"
+
+        client = TelegramClient(session_path, int(api_id), api_hash)
+        client.connect()
+
+        if not client.is_user_authorized():
+            client.disconnect()
+            return "[WARN] Telegram client not authorized. Run 'python scripts/setup_telegram.py' to authenticate.\n"
+
+        result = client(SearchRequest(q=target, limit=10))
+
+        has_results = False
+        if result.users:
+            output += f"  Users ({len(result.users)}):\n"
+            for user in result.users[:5]:
+                username = user.username or "No Username"
+                first_name = user.first_name or ""
+                last_name = user.last_name or ""
+                output += f"    - @{username} (Name: {first_name} {last_name})\n"
+            has_results = True
+
+        if result.chats:
+            output += f"  Chats/Channels ({len(result.chats)}):\n"
+            for chat in result.chats[:5]:
+                username = getattr(chat, "username", "No Username") or "No Username"
+                title = getattr(chat, "title", "No Title")
+                output += f"    - @{username} (Title: {title})\n"
+            has_results = True
+
+        if not has_results:
+            output = f"[OK] No Telegram users or channels found for: {target}\n"
+
+        client.disconnect()
+        return output
+
+    except ImportError:
+        return "[ERROR] Telethon not installed: pip install telethon\n"
+    except Exception as e:
+        return f"[ERROR] Telegram search error: {str(e)}\n"
+
+
 def discover_emails_from_text(text: str, target_name: str) -> List[str]:
     """Discover potential emails from text content"""
     emails = []

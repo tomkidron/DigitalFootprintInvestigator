@@ -48,7 +48,9 @@ def test_investigation_lifecycle_ui(page):
 
     consent_label = page.locator("label:has-text('I confirm I have a legitimate purpose')")
     expect(consent_label).to_be_visible(timeout=8000)
-    consent_label.click(force=True)
+    consent_input = page.get_by_role("checkbox", name="I confirm I have a legitimate purpose", exact=False)
+    if not consent_input.is_checked():
+        consent_label.click()
 
     input_field = page.locator("input[aria-label='Target Identifier']")
     input_field.fill("Test User")

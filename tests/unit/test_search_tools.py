@@ -516,7 +516,7 @@ class TestGoogleSearchPriority:
 
 
 class TestSearchWithDuckDuckGo:
-    @patch("duckduckgo_search.DDGS")
+    @patch("ddgs.DDGS")
     def test_search_calls_ddgs_correctly(self, mock_ddgs_class):
         from tools.search_tools import _search_with_duckduckgo
 
@@ -528,14 +528,16 @@ class TestSearchWithDuckDuckGo:
             mock_process.return_value = "Mocked Output"
             result = _search_with_duckduckgo("query")
 
-        mock_ddgs_instance.text.assert_called_once_with("query", max_results=10)
+        mock_ddgs_instance.text.assert_called_once_with("query", backend="html", max_results=10)
         assert result == "Mocked Output"
 
-    @patch("duckduckgo_search.DDGS")
+    @patch("ddgs.DDGS")
     def test_handles_ddgs_exception(self, mock_ddgs_class):
-        from tools.search_tools import _search_with_duckduckgo
+        mock_ddgs_instance = MagicMock()
+        mock_ddgs_class.return_value.__enter__.return_value = mock_ddgs_instance
+        mock_ddgs_instance.text.side_effect = Exception("API Error")
 
-        mock_ddgs_class.side_effect = Exception("API Error")
+        from tools.search_tools import _search_with_duckduckgo
 
         result = _search_with_duckduckgo("query")
         assert "error" in result.lower()

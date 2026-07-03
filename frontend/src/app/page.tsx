@@ -15,6 +15,7 @@ export default function Home() {
   const [isInvestigating, setIsInvestigating] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [currentReport, setCurrentReport] = useState<string | null>(null);
+  const [currentFilename, setCurrentFilename] = useState<string | null>(null);
 
   const [reports, setReports] = useState<
     {
@@ -23,6 +24,9 @@ export default function Home() {
       created_at: number;
     }[]
   >([]);
+
+  const [viewingReport, setViewingReport] = useState<string | null>(null);
+  const [viewingReportContent, setViewingReportContent] = useState<string>("");
 
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +39,7 @@ export default function Home() {
 
   async function fetchReports() {
     try {
-      const res = await fetch("http://localhost:8000/api/reports");
+      const res = await fetch("/api/reports");
       if (res.ok) {
         const data = await res.json();
         setReports(data);
@@ -55,7 +59,7 @@ export default function Home() {
   const deleteReport = async (filename: string) => {
     if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
     try {
-      await fetch(`http://localhost:8000/api/reports/${filename}`, {
+      await fetch(`/api/reports/${filename}`, {
         method: "DELETE",
       });
       fetchReports();
@@ -64,11 +68,25 @@ export default function Home() {
     }
   };
 
+  const viewReport = async (filename: string) => {
+    try {
+      const res = await fetch(`/api/reports/${filename}`);
+      if (res.ok) {
+        const text = await res.text();
+        setViewingReportContent(text);
+        setViewingReport(filename);
+      }
+    } catch (e) {
+      console.error("Failed to view report", e);
+    }
+  };
+
   const startInvestigation = async () => {
     if (!target || !consent) return;
     setIsInvestigating(true);
     setLogs([]);
     setCurrentReport(null);
+    setCurrentFilename(null);
 
     const config = {
       search: { mode: scanMode },
@@ -80,7 +98,7 @@ export default function Home() {
     };
 
     try {
-      const res = await fetch("http://localhost:8000/api/investigate", {
+      const res = await fetch("/api/investigate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target, config }),
@@ -103,33 +121,51 @@ export default function Home() {
       let buffer = "";
       while (true) {
         const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
           if (line.startsWith("data: ")) {
             const dataStr = line.replace("data: ", "").trim();
             if (dataStr) {
               try {
+                console.log("Parsing data:", dataStr);
                 const data = JSON.parse(dataStr);
                 setLogs((prev) => [
                   ...prev,
-                  `[${new Date().toLocaleTimeString()}] ${data.content}`,
+                  `[${new Date().toLocaleTimeString()}] ${data.content || "done"}`,
                 ]);
+                console.log("Parsed data:", data);
                 if (data.type === "done" || data.type === "error") {
+                  console.log("Setting isInvestigating to false, filename:", data.filename);
                   setIsInvestigating(false);
                   if (data.report) {
                     setCurrentReport(data.report);
+                  }
+                  if (data.filename) {
+                    setCurrentFilename(data.filename);
                   }
                 }
               } catch {
                 setLogs((prev) => [...prev, dataStr]);
               }
+              }
             }
           }
+        }
+        if (done) {
+          if (buffer.trim().startsWith("data: ")) {
+              const dataStr = buffer.replace("data: ", "").trim();
+              try {
+                  const data = JSON.parse(dataStr);
+                  if (data.type === "done" || data.type === "error") {
+                      setIsInvestigating(false);
+                      if (data.filename) setCurrentFilename(data.filename);
+                  }
+              } catch (e) {}
+          }
+          break;
         }
       }
     } catch (e: unknown) {
@@ -254,6 +290,48 @@ export default function Home() {
                 >
                   <ReactMarkdown>{currentReport}</ReactMarkdown>
                 </div>
+                {currentFilename && (
+                  <div
+                    style={{
+                      marginTop: "1.5rem",
+                      display: "flex",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <a
+                      href={`/api/reports/${currentFilename}.pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                    >
+                      Download PDF
+                    </a>
+                    <a
+                      href={`/api/reports/${currentFilename}.html`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                    >
+                      Download HTML
+                    </a>
+                    <a
+                      href={`/api/reports/${currentFilename}.json`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                    >
+                      Download JSON
+                    </a>
+                    <a
+                      href={`/api/reports/${currentFilename}.md`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-primary"
+                    >
+                      Download MD
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -377,8 +455,19 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="report-actions">
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        fontSize: "0.875rem",
+                        backgroundColor: "var(--accent-hover)",
+                      }}
+                      onClick={() => viewReport(report.name)}
+                    >
+                      View
+                    </button>
                     <a
-                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                      href={`/api/reports/${report.name.replace(
                         ".md",
                         ".pdf",
                       )}`}
@@ -393,7 +482,7 @@ export default function Home() {
                       PDF
                     </a>
                     <a
-                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                      href={`/api/reports/${report.name.replace(
                         ".md",
                         ".html",
                       )}`}
@@ -408,7 +497,7 @@ export default function Home() {
                       HTML
                     </a>
                     <a
-                      href={`http://localhost:8000/api/reports/${report.name.replace(
+                      href={`/api/reports/${report.name.replace(
                         ".md",
                         ".json",
                       )}`}
@@ -423,7 +512,7 @@ export default function Home() {
                       JSON
                     </a>
                     <a
-                      href={`http://localhost:8000/api/reports/${report.name}`}
+                      href={`/api/reports/${report.name}`}
                       target="_blank"
                       rel="noreferrer"
                       className="btn btn-primary"
@@ -447,6 +536,69 @@ export default function Home() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {viewingReport && (
+            <div
+              style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0,0,0,0.5)",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                zIndex: 1000,
+                padding: "2rem",
+              }}
+              onClick={() => setViewingReport(null)}
+            >
+              <div
+                style={{
+                  backgroundColor: "var(--bg-primary)",
+                  padding: "2rem",
+                  borderRadius: "8px",
+                  width: "100%",
+                  maxWidth: "800px",
+                  maxHeight: "90vh",
+                  overflowY: "auto",
+                  position: "relative",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setViewingReport(null)}
+                  style={{
+                    position: "absolute",
+                    top: "1rem",
+                    right: "1rem",
+                    background: "none",
+                    border: "none",
+                    fontSize: "1.5rem",
+                    cursor: "pointer",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  &times;
+                </button>
+                <h3 style={{ marginBottom: "1.5rem", paddingRight: "2rem" }}>
+                  {viewingReport}
+                </h3>
+                <div
+                  style={{
+                    padding: "1.5rem",
+                    backgroundColor: "var(--bg-secondary)",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-color)",
+                  }}
+                >
+                  <ReactMarkdown>{viewingReportContent}</ReactMarkdown>
+                </div>
+              </div>
             </div>
           )}
         </div>

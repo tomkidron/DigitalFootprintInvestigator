@@ -17,3 +17,6 @@ Pre-commit hooks are the source of truth for code quality. Trust them for:
 *   Security scanning (Bandit, secret detection)
 
 If a hook fails, fix the underlying issue before retrying. Do not work around hook failures.
+
+## Documentation Updates
+Always update the project documentation (`README.md`, `BACKLOG.md`, etc.) automatically after implementing major changes, new features, or significant refactors. Ensure the documentation stays strictly in sync with the live codebase.

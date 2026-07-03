@@ -7,11 +7,11 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 ## Features
 
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
-- **Platform coverage**: Google (Tavily → SerpAPI → free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
+- **Platform coverage**: Google (Tavily → SerpAPI → free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Telegram, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery, Gravatar profile pictures, Wayback Machine historical snapshots
 - **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
 - **Input validation**: Sanitization and validation of all user inputs
-- **Next.js & FastAPI web UI**: decoupled modern architecture with a Next.js static React frontend and a FastAPI backend for real-time SSE log streaming and report management
+- **Next.js & FastAPI web UI**: decoupled modern architecture with a Next.js static React frontend and a FastAPI backend for granular, real-time SSE log streaming and report management
 - **CLI mode**: scriptable via `python main.py`
 - **Advanced analysis** (optional): timeline correlation, social connection analysis, deep content analysis
 - **Scan Modes**: choose between **Quick Scan** (free, unauthenticated fallbacks only) and **Advanced Scan** (premium integrations using configured API keys)

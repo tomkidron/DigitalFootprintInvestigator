@@ -31,6 +31,12 @@ def google_search(query: str, scan_mode: str = "advanced") -> str:
     """
     query = sanitize_target(query)
     logger.info(f"Google Search initiated for query: {query}")
+    try:
+        from langchain_core.callbacks.manager import dispatch_custom_event
+
+        dispatch_custom_event("investigation_log", {"message": f"Querying Web Search for: '{query}'..."})
+    except Exception:
+        pass  # nosec B110
 
     tavily_key = os.getenv("TAVILY_API_KEY") if scan_mode != "quick" else None
     serpapi_key = os.getenv("SERPAPI_KEY") if scan_mode != "quick" else None
@@ -179,12 +185,12 @@ def _process_search_results(findings: list, query: str, provider: str, scan_mode
 def _search_with_duckduckgo(query: str, scan_mode: str = "advanced") -> str:
     """Search using duckduckgo-python library (free, highly reliable)"""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
 
         logger.debug(f"DuckDuckGo request: {query}")
         findings = []
         with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=10))
+            results = list(ddgs.text(query, backend="html", max_results=10))
             for result in results:
                 findings.append(
                     {
@@ -200,8 +206,8 @@ def _search_with_duckduckgo(query: str, scan_mode: str = "advanced") -> str:
         return _process_search_results(findings, query, provider="DuckDuckGo", scan_mode=scan_mode)
 
     except ImportError:
-        logger.error("duckduckgo-search library not installed")
-        return "duckduckgo-search library not installed. Install with: pip install duckduckgo-search\n"
+        logger.error("ddgs library not installed")
+        return "ddgs library not installed. Install with: pip install ddgs\n"
     except Exception as e:
         logger.error(f"DuckDuckGo search error: {str(e)}")
         return f"DuckDuckGo search error: {str(e)}\n"
@@ -382,7 +388,17 @@ def social_media_search(target: str, scan_mode: str = "advanced") -> str:
     results.append(f"Social Media Search for: {target}\n")
     results.append("=" * 60 + "\n")
 
-    platforms = ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]
+    platforms = [
+        "linkedin",
+        "twitter",
+        "telegram",
+        "github",
+        "reddit",
+        "youtube",
+        "instagram",
+        "facebook",
+        "soundcloud",
+    ]
     for platform in platforms:
         results.append(_search_platform(platform, target, scan_mode=scan_mode))
 
@@ -399,6 +415,13 @@ def _search_platform(platform: str, target: str, scan_mode: str = "advanced") ->
     output = f"\n{platform.upper()} Search:\n"
     output += "-" * 40 + "\n"
 
+    try:
+        from langchain_core.callbacks.manager import dispatch_custom_event
+
+        dispatch_custom_event("investigation_log", {"message": f"Searching {platform.capitalize()}..."})
+    except Exception:
+        pass  # nosec B110
+
     if platform == "linkedin":
         output += _search_linkedin(target)
     elif platform == "twitter":
@@ -409,6 +432,8 @@ def _search_platform(platform: str, target: str, scan_mode: str = "advanced") ->
         output += _search_reddit(target)
     elif platform == "youtube":
         output += _search_youtube(target, scan_mode=scan_mode)
+    elif platform == "telegram":
+        output += _search_telegram(target, scan_mode=scan_mode)
     elif platform in ["instagram", "facebook", "soundcloud"]:
         output += f"[WARN] {platform.upper()}: Direct API not accessible. Using Google dork fallback.\n\n"
         query = f'site:{platform}.com "{target}"'
@@ -456,6 +481,29 @@ def _search_twitter(target: str, scan_mode: str = "advanced") -> str:
     ):
         result += "\n[WARN] Twitter API failed or was skipped. Falling back to Google dork. Manual search/verification recommended:\n\n"
         query = f'site:twitter.com OR site:x.com "{target}"'
+        result += f"Search query: {query}\n\n"
+        result += google_search(query, scan_mode=scan_mode)
+
+    return result
+
+
+def _search_telegram(target: str, scan_mode: str = "advanced") -> str:
+    """Search Telegram with API"""
+    if scan_mode == "quick":
+        result = "[SKIP] Telegram: Direct API skipped in Quick Scan mode.\n"
+    else:
+        from tools.api_tools import search_telegram_channels
+
+        result = search_telegram_channels(target)
+
+    if (
+        "error" in result.lower()
+        or "not configured" in result.lower()
+        or "not authorized" in result.lower()
+        or "skipped" in result.lower()
+    ):
+        result += "\n[WARN] Telegram API failed or was skipped. Falling back to Google dork. Manual search/verification recommended:\n\n"
+        query = f'site:t.me "{target}"'
         result += f"Search query: {query}\n\n"
         result += google_search(query, scan_mode=scan_mode)
 

@@ -32,13 +32,13 @@ def get_saved_reports() -> list[Path]:
     reports_dir = Path("reports").resolve()
     if not reports_dir.exists():
         return []
-        
+
     valid_files = []
     for p in reports_dir.glob("*.md"):
         # Resolve both and check if it's strictly within reports_dir
         if str(p.resolve()).startswith(str(reports_dir)):
             valid_files.append(p)
-            
+
     files = sorted(valid_files, key=lambda p: p.stat().st_mtime, reverse=True)
     return files
 
@@ -63,21 +63,50 @@ async def investigate(req: InvestigateRequest):
         }
 
         try:
-            # Note: We stream state updates. In a production app you might stream token-by-token or logs.
             final_report = None
-            async for event in workflow.astream(inputs, thread_config):
-                node_name = list(event.keys())[0]
-                if node_name == "report_node" and "report" in event[node_name]:
-                    final_report = event[node_name]["report"]
+            final_filename = None
+            async for event in workflow.astream_events(inputs, thread_config, version="v2"):
+                kind = event["event"]
+                name = event.get("name", "")
 
-                yield {
-                    "event": "message",
-                    "data": json.dumps({"type": "update", "content": f"Completed analysis phase: {node_name}"}),
-                }
+                if kind == "on_custom_event" and name == "investigation_log":
+                    msg = event["data"].get("message", "")
+                    yield {
+                        "event": "message",
+                        "data": json.dumps({"type": "update", "content": msg}),
+                    }
+                elif kind == "on_chain_start":
+                    if name in ["google_search", "social_search", "analysis", "advanced_analysis", "report"]:
+                        yield {
+                            "event": "message",
+                            "data": json.dumps(
+                                {"type": "update", "content": f"Starting phase: {name.replace('_', ' ')}..."}
+                            ),
+                        }
+                elif kind == "on_chain_end":
+                    if name in ["google_search", "social_search", "analysis", "advanced_analysis", "report"]:
+                        yield {
+                            "event": "message",
+                            "data": json.dumps(
+                                {"type": "update", "content": f"Completed phase: {name.replace('_', ' ')}"}
+                            ),
+                        }
+                    elif name == "LangGraph":
+                        output = event["data"].get("output", {})
+                        if output and isinstance(output, dict) and "report" in output:
+                            final_report = output["report"]
+                            final_filename = output.get("report_filename")
 
             yield {
                 "event": "message",
-                "data": json.dumps({"type": "done", "content": "Investigation complete!", "report": final_report}),
+                "data": json.dumps(
+                    {
+                        "type": "done",
+                        "content": "Investigation complete!",
+                        "report": final_report,
+                        "filename": final_filename,
+                    }
+                ),
             }
         except Exception as e:
             yield {"event": "error", "data": json.dumps({"type": "error", "content": str(e)})}

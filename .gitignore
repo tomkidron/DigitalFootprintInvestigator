@@ -72,3 +72,7 @@ tests/ui/*.png
 
 # Claude Code local settings (machine-specific, not project config)
 .claude/settings.local.json
+
+# Telegram session files
+*.session
+*.session-journal

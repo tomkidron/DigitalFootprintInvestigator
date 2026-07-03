@@ -60,12 +60,10 @@ def test_reports_tab_navigable(page):
 
 
 def test_reports_tab_empty_state(page):
+    page.route("**/api/reports", lambda route: route.fulfill(status=200, headers={"Access-Control-Allow-Origin": "*"}, json=[]))
     reports_tab = page.locator("button.tab:has-text('Reports')")
     expect(reports_tab).to_be_visible(timeout=8000)
     reports_tab.click()
 
     empty_msg = page.get_by_text("No reports found", exact=False)
-    if not empty_msg.is_visible():
-        pytest.skip("Reports exist in reports/ — empty-state not shown")
-
     expect(empty_msg).to_be_visible(timeout=8000)

@@ -49,3 +49,7 @@ tests/ui/*.png
 
 # Node (safety catch)
 node_modules/
+
+# Telegram session files
+*.session
+*.session-journal

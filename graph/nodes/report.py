@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import markdown
+from langchain_core.messages import HumanMessage, SystemMessage
 from xhtml2pdf import pisa
 
 from graph.nodes._timing import log_done, log_start
@@ -42,21 +43,39 @@ def report_node(state):
     config = state.get("config", {})
     scan_mode = config.get("scan_mode", "Advanced").capitalize()
 
-    llm = get_llm()
+    llm = get_llm(purpose="report")
+
+    try:
+        from langchain_core.callbacks.manager import dispatch_custom_event
+
+        dispatch_custom_event("investigation_log", {"message": "Generating final Markdown report..."})
+    except Exception:
+        pass  # nosec B110
 
     actual_platforms = _determine_actual_platforms(google_data, social_data)
     platform_count = len(actual_platforms)
     platform_list = ", ".join(actual_platforms)
 
-    prompt = f"""Create a comprehensive OSINT investigation report on: {target}
+    system_prompt = (
+        "You are an elite Cyber Intelligence (OSINT) Analyst working for a top-tier security firm. "
+        "Your analysis must be entirely objective, evidence-based, and free of hallucinations. "
+        "You do not make assumptions. You quantify your confidence in every assertion. "
+        "Your sole duty is to synthesize raw intelligence and analysis into a highly structured, professional Markdown report."
+    )
 
+    human_prompt = f"""Create a comprehensive OSINT investigation report on: {target}
+
+<metadata>
 IMPORTANT METADATA:
 - Report Generation Date: {current_date}
 - Data Collection Date: {current_date}
 - Investigation Status: Assess whether ongoing monitoring is recommended or investigation is complete
 - Data Quality: Rate the overall quality and completeness of gathered data (High/Medium/Low)
 - Platforms Actually Analyzed: {platform_count} ({platform_list})
+- Scan Mode: {scan_mode}
+</metadata>
 
+<formatting_rules>
 CRITICAL REPORTING ACCURACY:
 - ONLY report platforms that were actually analyzed with tools
 - Do NOT claim analysis of platforms without actual data
@@ -75,15 +94,10 @@ REPORT HEADER BLOCK (mandatory, immediately after the main # title):
 Immediately after the main `# OSINT Investigation Report: <target>` title line, include exactly this compact block — no extra text between the title and the block:
 
 **Classification:** Open Source Intelligence (OSINT) — Public Information Only
-
 **Report Generation Date:** {current_date}
-
 **Data Collection Date:** {current_date}
-
 **Scan Mode:** {scan_mode}
-
 **Prepared By:** Automated OSINT Analysis System
-
 **Distribution:** Authorized Recipients Only
 
 Report structure:
@@ -97,19 +111,26 @@ Report structure:
 - Confidence Assessment
 - Sources and References
 - Data Freshness Disclaimer
+Format: Professional markdown report with all sources cited and analysis methods documented.
+</formatting_rules>
 
-GOOGLE SEARCH FINDINGS:
+<intelligence_data>
+  <google_search>
 {google_data}
+  </google_search>
 
-SOCIAL MEDIA FINDINGS:
+  <social_search>
 {social_data}
+  </social_search>
 
-ANALYSIS:
+  <analysis>
 {analysis}
+  </analysis>
+</intelligence_data>"""
 
-Format: Professional markdown report with all sources cited and analysis methods documented."""
+    messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_prompt)]
 
-    response = llm.invoke(prompt)
+    response = llm.invoke(messages)
     report = response.content
 
     output_dir = Path("reports")
@@ -159,4 +180,4 @@ Format: Professional markdown report with all sources cited and analysis methods
     log_done("Report generation", start)
     print(f"Reports saved in {output_dir} with base name {base_filename}")
 
-    return {"report": report}
+    return {"report": report, "report_filename": base_filename}
