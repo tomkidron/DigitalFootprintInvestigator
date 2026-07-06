@@ -100,18 +100,19 @@ Immediately after the main `# OSINT Investigation Report: <target>` title line, 
 **Prepared By:** Automated OSINT Analysis System
 **Distribution:** Authorized Recipients Only
 
-Report structure:
-- Executive Summary (specific findings, not generalizations)
-- Report Metadata (Generation Date: {current_date}, Investigation Status, Data Quality, Actual Platforms Analyzed)
-- Target Overview (separate sections per subject if multiple found)
-- Digital Footprint Analysis (ONLY for subjects with actual platform data)
-- Platform-by-Platform Breakdown (ONLY platforms with actual data, ONLY for primary subject)
-- Secondary Subject Status (if applicable - explain why limited analysis)
-- Key Findings and Patterns
-- Confidence Assessment
-- Sources and References
-- Data Freshness Disclaimer
-Format: Professional markdown report with all sources cited and analysis methods documented.
+Report structure (Strictly follow this professional format):
+- 1. Executive Summary (Overview, Objective, Summary of specific findings, Initial Recommendations)
+- 2. Scope of Investigation (Subject of Investigation, Scope and Limitations, Timeframe, Scan Mode: {scan_mode})
+- 3. Research Methodology (Data Quality, Actual Platforms Analyzed: {platform_count} ({platform_list}), Tools & Techniques Used)
+- 4. Findings
+  - 4.1. Entity Overview (Basic Information, Aliases, Target Overview)
+  - 4.2. Online Presence & Social Media Analysis (Platform-by-Platform Breakdown, ONLY for platforms with actual data)
+  - 4.3. Public Records & Data Breaches (Breach data and associated risks)
+  - 4.4. Network Analysis (Secondary Subjects and their connections, if applicable)
+- 5. Risks & Concerns (Privacy Concerns, Data Exposure Risks)
+- 6. Conclusion & Recommendations (Key Findings, Next Steps)
+- 7. Appendix (Sources and References, Confidence Assessment, Data Freshness Disclaimer)
+Format: Professional agency-grade markdown report with all sources cited and analysis methods documented.
 </formatting_rules>
 
 <intelligence_data>

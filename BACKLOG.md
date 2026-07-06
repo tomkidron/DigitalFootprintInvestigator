@@ -47,6 +47,39 @@
 - **Use case**: Allows users to view reports inline and download them in specific formats (MD, PDF) directly from the Reports tab.
 - **Value for individuals**: HIGH - Improves UI navigation and accessibility of generated OSINT reports.
 
+### 10. Professional Report Formatting (Course Templates)
+- **Status**: Implemented
+- **Use case**: Implemented the structure and professional appearance extracted from the OSINT course's client report template.
+- **Value for individuals**: HIGH - Generates agency-grade deliverables.
+
+---
+
+## New Investigation Starting Points (Inputs)
+
+These features focus on expanding the core input types the UI and CLI can accept to kick-off an investigation. They are prioritized below based on the balance of implementation complexity vs. added value.
+
+### 10. Input Support: Domain Names
+- **Use case**: Accept a domain (e.g., `example.com`) as a primary target to immediately trigger WHOIS lookups, subdomain enumeration, and linked email discovery.
+- **Implementation**: Update `utils/validation.py` to detect domains, update frontend/CLI input handling. We can leverage the already completed WhoisXML API.
+- **Effort**: Low (Enrichment backend logic already exists).
+- **Value for individuals**: HIGH - Quickest win for expanding our footprinting capabilities.
+
+### 11. Input Support: Phone Numbers
+- **Use case**: Accept international phone numbers (e.g., `+1234567890`) to search breach databases, caller ID services, and reverse lookup tools.
+- **Implementation**:
+  - Add strict regex to `utils/validation.py`.
+  - Use the Python `phonenumbers` library to automatically parse Country Code, Area Code, and Carrier without API calls.
+  - Integrate free-tier APIs (like Twilio Lookup or Numverify) to flag VOIP/Burner numbers.
+  - Pipe extracted names (via Truecaller) into existing search nodes and breach databases (Dehashed).
+- **Effort**: Medium (Requires strict validation rules and new API integrations).
+- **Value for individuals**: HIGH - Phone numbers are universal unique identifiers and crucial for OSINT.
+
+### 12. Input Support: Photo / Image Uploads
+- **Use case**: Allow users to upload an image to perform facial recognition or reverse image search (PimEyes/Google Lens) to find the target's name or social profiles.
+- **Implementation**: Requires UI changes to support multipart file uploads, backend handling of binary data, and routing to image search APIs.
+- **Effort**: High (Full stack changes required).
+- **Value for individuals**: VERY HIGH - The ultimate pivot tool, though technically the most complex to implement robustly.
+
 ---
 
 ## High Priority (Global Focus & High ROI)
@@ -61,55 +94,31 @@
 - **Effort**: Low
 - **Value for individuals**: HIGH - Cleartext passwords frequently lead to discovering burner accounts via password reuse worldwide.
 
-### 6. Reverse Image Search (PimEyes / Google Lens)
-- **API**: pimeyes.com (paid) or SerpAPI Google Images (fallback)
-- **Use case**: Pivot from a discovered profile picture to find hidden social/dating profiles across international platforms (e.g., VK, TikTok).
-- **Implementation**: Add to `tools/search_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: HIGH - The ultimate global equalizer for visual identification.
-
-### 7. Phone Number Enrichment (Truecaller / Numverify)
-- **API**: Unofficial Truecaller APIs or numverify.com
-- **Use case**: Caller ID name resolution for extracted phone numbers.
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: HIGH - Truecaller is incredibly powerful internationally (Middle East, India, Europe) for identifying unknown/burner numbers via crowdsourced contacts.
-
----
-
-## Medium Priority (Powerful but Expensive/Niche)
-
-### 8. Global Identity Resolution (Pipl)
-- **API**: pipl.com/api
-- **Cost/Access**: High / Requires enterprise approval
-- **Use case**: Enrich person data from an email, phone, or social profile globally.
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: MEDIUM - While it has excellent global coverage (including Israel/Europe), the high cost and access barriers make it less practical for immediate indie development compared to open-source methods.
-
-### 9. Cryptocurrency Footprinting (Blockchain.com / Etherscan)
-- **API**: Various block explorers
-- **Free tier**: High limits
-- **Use case**: Check activity, balance, and transaction history if a BTC/ETH address is found in a profile.
-- **Implementation**: Add to `tools/api_tools.py`
-- **Effort**: Medium
-- **Value for individuals**: LOW/NICHE - Borderless, but only valuable if the target operates in the crypto space.
-
----
 
 ## Technical Improvements
 
-### 12. Scheduled Investigations
+### 13. Scheduled Investigations
 - **Use case**: Monitor targets over time and detect footprint changes (e.g., account deletions).
 - **Implementation**: Add scheduler with a database for tracking state.
 - **Effort**: High
 
-### 13. Rate Limit Manager
+### 14. Rate Limit Manager
 - **Use case**: Track and manage API quotas actively rather than relying purely on exception handling.
 - **Implementation**: Add `utils/rate_limiter.py`
 - **Effort**: Medium
 
-### 14. Async API Calls
+### 15. Async API Calls
 - **Use case**: Speed up parallel API calls within individual LangGraph nodes.
 - **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
 - **Effort**: High
+
+### 16. Data Integrity & Source Credibility Scoring
+- **Use case**: Add confidence scoring to OSINT results to help users gauge the reliability of collected data (e.g., official `.gov` domain = High, anonymous pastebin = Low).
+- **Implementation**: Update `utils/models.py` to include `credibility_level`, modify `analysis.py` to cross-validate findings, and instruct the LLM in `report.py` to explicitly warn about low-confidence data in a new report section.
+- **Effort**: Medium
+
+### 19. EXIF Data & Geolocation Extraction
+- **Use case**: When an image is analyzed (via the upcoming Photo Upload feature), automatically extract EXIF metadata (GPS coordinates, camera model, timestamps) to pinpoint physical locations.
+- **Implementation**: Integrate Python libraries like `Pillow` or `exifread` into an image processing node before passing the image to the reverse search APIs. Add automated Google Maps link generation for extracted coordinates.
+- **Effort**: Medium
+- **Value for individuals**: HIGH - Essential for physical location tracking.

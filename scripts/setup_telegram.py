@@ -6,11 +6,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
 
+
 def main():
     print("=========================================")
     print("Telegram Session Setup for OSINT Tool")
     print("=========================================\n")
-    
+
     # Load environment variables
     env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
     if os.path.exists(env_path):
@@ -23,12 +24,12 @@ def main():
     api_id = os.getenv("TELEGRAM_API_ID")
     api_hash = os.getenv("TELEGRAM_API_HASH")
     phone = os.getenv("TELEGRAM_PHONE")
-    
+
     if not api_id or not api_hash:
         print("[ERROR] TELEGRAM_API_ID and/or TELEGRAM_API_HASH are not set in your .env file.")
         print("Please get them from https://my.telegram.org and add them to .env")
         return
-        
+
     if not phone:
         print("[WARN] TELEGRAM_PHONE is not set in your .env file.")
         phone = input("Please enter your phone number with country code (e.g. +1234567890): ").strip()
@@ -44,13 +45,13 @@ def main():
 
     # Use 'anon' session name in the project root
     session_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "anon")
-    
+
     print("\nInitializing Telegram client...")
     print(f"Session will be saved as: {session_path}.session")
-    
+
     client = TelegramClient(session_path, int(api_id), api_hash)
     client.connect()
-    
+
     if not client.is_user_authorized():
         print("\n[INFO] You are not logged in. Sending request to Telegram...")
         try:
@@ -58,7 +59,7 @@ def main():
             print("\n[ACTION REQUIRED]")
             print("Telegram just sent a code to your Telegram app (or via SMS if app is not available).")
             code = input("Please enter the code you received: ").strip()
-            
+
             client.sign_in(phone, code)
             print("\n[SUCCESS] Successfully authenticated!")
             print("The session file has been created. The OSINT tool can now use Telegram search.")
@@ -72,10 +73,11 @@ def main():
                 # Fallback to standard input if getpass fails in background tasks
                 try:
                     import getpass
+
                     password = getpass.getpass("Please enter your 2FA password: ")
                 except Exception:
                     password = input("Please enter your 2FA password: ").strip()
-                    
+
                 try:
                     client.sign_in(password=password)
                     print("\n[SUCCESS] Successfully authenticated with 2FA!")
@@ -85,8 +87,9 @@ def main():
     else:
         print("\n[SUCCESS] You are already authenticated!")
         print("The session file is ready to use.")
-        
+
     client.disconnect()
+
 
 if __name__ == "__main__":
     main()

@@ -126,44 +126,49 @@ export default function Home() {
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
           for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const dataStr = line.replace("data: ", "").trim();
-            if (dataStr) {
-              try {
-                console.log("Parsing data:", dataStr);
-                const data = JSON.parse(dataStr);
-                setLogs((prev) => [
-                  ...prev,
-                  `[${new Date().toLocaleTimeString()}] ${data.content || "done"}`,
-                ]);
-                console.log("Parsed data:", data);
-                if (data.type === "done" || data.type === "error") {
-                  console.log("Setting isInvestigating to false, filename:", data.filename);
-                  setIsInvestigating(false);
-                  if (data.report) {
-                    setCurrentReport(data.report);
+            if (line.startsWith("data: ")) {
+              const dataStr = line.replace("data: ", "").trim();
+              if (dataStr) {
+                try {
+                  console.log("Parsing data:", dataStr);
+                  const data = JSON.parse(dataStr);
+                  setLogs((prev) => [
+                    ...prev,
+                    `[${new Date().toLocaleTimeString()}] ${
+                      data.content || "done"
+                    }`,
+                  ]);
+                  console.log("Parsed data:", data);
+                  if (data.type === "done" || data.type === "error") {
+                    console.log(
+                      "Setting isInvestigating to false, filename:",
+                      data.filename,
+                    );
+                    setIsInvestigating(false);
+                    if (data.report) {
+                      setCurrentReport(data.report);
+                    }
+                    if (data.filename) {
+                      setCurrentFilename(data.filename);
+                    }
                   }
-                  if (data.filename) {
-                    setCurrentFilename(data.filename);
-                  }
+                } catch {
+                  setLogs((prev) => [...prev, dataStr]);
                 }
-              } catch {
-                setLogs((prev) => [...prev, dataStr]);
-              }
               }
             }
           }
         }
         if (done) {
           if (buffer.trim().startsWith("data: ")) {
-              const dataStr = buffer.replace("data: ", "").trim();
-              try {
-                  const data = JSON.parse(dataStr);
-                  if (data.type === "done" || data.type === "error") {
-                      setIsInvestigating(false);
-                      if (data.filename) setCurrentFilename(data.filename);
-                  }
-              } catch (e) {}
+            const dataStr = buffer.replace("data: ", "").trim();
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === "done" || data.type === "error") {
+                setIsInvestigating(false);
+                if (data.filename) setCurrentFilename(data.filename);
+              }
+            } catch (e) {}
           }
           break;
         }

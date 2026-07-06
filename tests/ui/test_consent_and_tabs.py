@@ -1,4 +1,3 @@
-import pytest
 from playwright.sync_api import expect
 
 
@@ -60,7 +59,9 @@ def test_reports_tab_navigable(page):
 
 
 def test_reports_tab_empty_state(page):
-    page.route("**/api/reports", lambda route: route.fulfill(status=200, headers={"Access-Control-Allow-Origin": "*"}, json=[]))
+    page.route(
+        "**/api/reports", lambda route: route.fulfill(status=200, headers={"Access-Control-Allow-Origin": "*"}, json=[])
+    )
     reports_tab = page.locator("button.tab:has-text('Reports')")
     expect(reports_tab).to_be_visible(timeout=8000)
     reports_tab.click()

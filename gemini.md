@@ -1,6 +1,6 @@
 # Gemini / Antigravity Assistant Guide
 
-This repository uses Antigravity (Gemini) as its primary agentic coding assistant. 
+This repository uses Antigravity (Gemini) as its primary agentic coding assistant.
 
 Unlike traditional setups that might rely on a `claude.md` or `.cursorrules` file at the root of the project, Antigravity discovers context, rules, and skills through the **Customizations Framework**.
 
