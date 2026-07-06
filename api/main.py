@@ -35,12 +35,11 @@ def get_saved_reports() -> list[Path]:
 
     valid_files = []
     for p in reports_dir.glob("*.md"):
-        # Resolve both and check if it's strictly within reports_dir
-        if str(p.resolve()).startswith(str(reports_dir)):
-            valid_files.append(p)
+        resolved = p.resolve()
+        if resolved.is_relative_to(reports_dir):
+            valid_files.append(resolved)
 
-    files = sorted(valid_files, key=lambda p: p.stat().st_mtime, reverse=True)
-    return files
+    return sorted(valid_files, key=lambda p: p.stat().st_mtime, reverse=True)
 
 
 @app.post("/api/investigate")
@@ -122,31 +121,24 @@ async def list_reports():
 
 @app.get("/api/reports/{filename}")
 async def get_report(filename: str):
-    # Reject filenames containing path separators before constructing the path
-    if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Invalid file path")
-    reports_dir = Path("reports").resolve()
-    target_path = (reports_dir / filename).resolve()
-    if not target_path.is_relative_to(reports_dir):
-        raise HTTPException(status_code=400, detail="Invalid file path")
-    if not target_path.exists():
+    # Resolve only from the trusted list — never construct a path from user input
+    reports = get_saved_reports()
+    matched = next((p for p in reports if p.name == filename), None)
+    if matched is None:
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(target_path)
+    return FileResponse(matched)
 
 
 @app.delete("/api/reports/{filename}")
 async def delete_report(filename: str):
-    # Reject filenames containing path separators before constructing the path
-    if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Invalid file path")
-    reports_dir = Path("reports").resolve()
-    target_path = (reports_dir / filename).resolve()
-    if not target_path.is_relative_to(reports_dir):
-        raise HTTPException(status_code=400, detail="Invalid file path")
-    if not target_path.exists():
+    # Resolve only from the trusted list — never construct a path from user input
+    reports = get_saved_reports()
+    matched = next((p for p in reports if p.name == filename), None)
+    if matched is None:
         raise HTTPException(status_code=404, detail="File not found")
 
-    base_path = target_path.with_suffix("")
+    reports_dir = matched.parent
+    base_path = matched.with_suffix("")
     for ext in [".md", ".json", ".html", ".pdf"]:
         p = base_path.with_suffix(ext)
         if p.exists() and p.is_relative_to(reports_dir):
