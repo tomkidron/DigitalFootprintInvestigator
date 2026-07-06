@@ -122,9 +122,12 @@ async def list_reports():
 
 @app.get("/api/reports/{filename}")
 async def get_report(filename: str):
+    # Reject filenames containing path separators before constructing the path
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid file path")
     reports_dir = Path("reports").resolve()
     target_path = (reports_dir / filename).resolve()
-    if not str(target_path).startswith(str(reports_dir)):
+    if not target_path.is_relative_to(reports_dir):
         raise HTTPException(status_code=400, detail="Invalid file path")
     if not target_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
@@ -133,9 +136,12 @@ async def get_report(filename: str):
 
 @app.delete("/api/reports/{filename}")
 async def delete_report(filename: str):
+    # Reject filenames containing path separators before constructing the path
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid file path")
     reports_dir = Path("reports").resolve()
     target_path = (reports_dir / filename).resolve()
-    if not str(target_path).startswith(str(reports_dir)):
+    if not target_path.is_relative_to(reports_dir):
         raise HTTPException(status_code=400, detail="Invalid file path")
     if not target_path.exists():
         raise HTTPException(status_code=404, detail="File not found")
@@ -143,7 +149,7 @@ async def delete_report(filename: str):
     base_path = target_path.with_suffix("")
     for ext in [".md", ".json", ".html", ".pdf"]:
         p = base_path.with_suffix(ext)
-        if p.exists():
+        if p.exists() and p.is_relative_to(reports_dir):
             p.unlink()
 
     return {"message": "Deleted successfully"}
