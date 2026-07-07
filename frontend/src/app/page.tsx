@@ -239,7 +239,7 @@ export default function Home() {
                   <input
                     type="text"
                     id="target"
-                    placeholder="Enter Name, Email, Username, or Phone Number..."
+                    placeholder="Enter Name, Email, Username, Domain, or Phone Number..."
                     value={target}
                     onChange={(e) => setTarget(e.target.value)}
                     disabled={isInvestigating}

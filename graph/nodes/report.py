@@ -8,7 +8,7 @@ import markdown
 from langchain_core.messages import HumanMessage, SystemMessage
 from xhtml2pdf import pisa
 
-from graph.nodes._timing import log_done, log_start
+from graph.nodes._timing import log_done, log_event, log_start
 from utils.llm import get_llm
 
 
@@ -45,12 +45,7 @@ def report_node(state):
 
     llm = get_llm(purpose="report")
 
-    try:
-        from langchain_core.callbacks.manager import dispatch_custom_event
-
-        dispatch_custom_event("investigation_log", {"message": "Generating final Markdown report..."})
-    except Exception:
-        pass  # nosec B110
+    log_event("Generating final Markdown report...")
 
     actual_platforms = _determine_actual_platforms(google_data, social_data)
     platform_count = len(actual_platforms)

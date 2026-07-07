@@ -223,6 +223,48 @@ class TestIsValidUsername:
         assert is_valid_username("john-doe") is False
 
 
+class TestIsValidDomain:
+    def test_valid_simple_domain(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("example.com") is True
+
+    def test_valid_subdomain(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("sub.example.com") is True
+
+    def test_valid_country_tld(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("example.co.uk") is True
+
+    def test_invalid_with_scheme(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("https://example.com") is False
+
+    def test_invalid_no_tld(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("localhost") is False
+
+    def test_invalid_plain_email(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("user@example.com") is False
+
+    def test_invalid_with_path(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("example.com/path") is False
+
+    def test_invalid_empty(self):
+        from utils.validation import is_valid_domain
+
+        assert is_valid_domain("") is False
+
+
 class TestSanitizeTarget:
     def test_strips_whitespace(self):
         from utils.validation import sanitize_target
@@ -265,6 +307,21 @@ class TestDetectTargetType:
         from utils.validation import detect_target_type
 
         assert detect_target_type("johndoe") == "username"
+
+    def test_detects_domain(self):
+        from utils.validation import detect_target_type
+
+        assert detect_target_type("example.com") == "domain"
+
+    def test_detects_subdomain(self):
+        from utils.validation import detect_target_type
+
+        assert detect_target_type("sub.example.com") == "domain"
+
+    def test_email_not_classified_as_domain(self):
+        from utils.validation import detect_target_type
+
+        assert detect_target_type("alice@example.com") == "email"
 
 
 # ---------------------------------------------------------------------------

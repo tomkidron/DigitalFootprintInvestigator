@@ -2,7 +2,7 @@
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from graph.nodes._timing import log_done, log_start
+from graph.nodes._timing import log_done, log_event, log_start
 from utils.llm import get_llm
 
 
@@ -16,12 +16,7 @@ def analysis_node(state):
 
     llm = get_llm(purpose="analysis")
 
-    try:
-        from langchain_core.callbacks.manager import dispatch_custom_event
-
-        dispatch_custom_event("investigation_log", {"message": "Correlating intelligence data with AI..."})
-    except Exception:
-        pass  # nosec B110
+    log_event("Correlating intelligence data with AI...")
 
     system_prompt = (
         "You are an elite Cyber Intelligence (OSINT) Analyst working for a top-tier security firm. "

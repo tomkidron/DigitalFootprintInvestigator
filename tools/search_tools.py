@@ -16,6 +16,16 @@ from utils.validation import sanitize_target
 logger = logging.getLogger("osint_tool")
 
 
+def _log_event(msg: str) -> None:
+    """Emit a progress message to the frontend log stream, if available."""
+    try:
+        from langchain_core.callbacks.manager import dispatch_custom_event
+
+        dispatch_custom_event("investigation_log", {"message": msg})
+    except Exception:
+        pass  # nosec B110
+
+
 def google_search(query: str, scan_mode: str = "advanced") -> str:
     """
     Performs Google searches and extracts relevant information.
@@ -31,12 +41,7 @@ def google_search(query: str, scan_mode: str = "advanced") -> str:
     """
     query = sanitize_target(query)
     logger.info(f"Google Search initiated for query: {query}")
-    try:
-        from langchain_core.callbacks.manager import dispatch_custom_event
-
-        dispatch_custom_event("investigation_log", {"message": f"Querying Web Search for: '{query}'..."})
-    except Exception:
-        pass  # nosec B110
+    _log_event(f"Querying Web Search for: '{query}'...")
 
     tavily_key = os.getenv("TAVILY_API_KEY") if scan_mode != "quick" else None
     serpapi_key = os.getenv("SERPAPI_KEY") if scan_mode != "quick" else None
@@ -415,12 +420,7 @@ def _search_platform(platform: str, target: str, scan_mode: str = "advanced") ->
     output = f"\n{platform.upper()} Search:\n"
     output += "-" * 40 + "\n"
 
-    try:
-        from langchain_core.callbacks.manager import dispatch_custom_event
-
-        dispatch_custom_event("investigation_log", {"message": f"Searching {platform.capitalize()}..."})
-    except Exception:
-        pass  # nosec B110
+    _log_event(f"Searching {platform.capitalize()}...")
 
     if platform == "linkedin":
         output += _search_linkedin(target)
@@ -684,3 +684,95 @@ def _search_contact_patterns(text: str) -> str:
         contacts.append(f"Telegram: {', '.join(set(telegram_handles))}")
 
     return "\n".join(contacts) if contacts else ""
+
+
+def domain_search(domain: str, scan_mode: str = "advanced") -> str:
+    """Orchestrate OSINT collection for a bare domain target.
+
+    Runs WHOIS, subdomain enumeration via crt.sh, linked email discovery,
+    a Wayback Machine snapshot check, and targeted Google dorks.
+
+    Args:
+        domain: A validated bare domain (e.g. example.com).
+        scan_mode: 'quick' or 'advanced'.
+
+    Returns:
+        Formatted multi-section OSINT report string.
+    """
+    from tools.api_tools import check_wayback_machine, enhanced_email_discovery, search_whoisxml
+
+    _log_event(f"Starting domain investigation for: '{domain}'...")
+
+    output = f"Domain Investigation: {domain}\n"
+    output += "=" * 60 + "\n\n"
+
+    # --- 1. WHOIS ---
+    output += "=== WHOIS RECORD ===\n"
+    if scan_mode == "quick":
+        output += "[SKIP] WHOIS lookup skipped in Quick Scan mode.\n\n"
+    else:
+        _log_event(f"Querying WHOIS for {domain}...")
+        whois_result = search_whoisxml(domain)
+        output += whois_result if whois_result else f"[WARN] No WHOIS data found for {domain}.\n"
+        output += "\n"
+
+    # --- 2. Subdomain enumeration via crt.sh ---
+    output += "=== SUBDOMAIN ENUMERATION (crt.sh) ===\n"
+    _log_event(f"Enumerating subdomains for {domain}...")
+    try:
+        crt_url = f"https://crt.sh/?q=%.{domain}&output=json"
+        resp = requests.get(crt_url, timeout=15, headers={"Accept": "application/json"})
+        if resp.status_code == 200:
+            entries = resp.json()
+            subdomains: set[str] = set()
+            for entry in entries:
+                name_value = entry.get("name_value", "")
+                for name in name_value.splitlines():
+                    name = name.strip().lstrip("*.")
+                    if name and name.endswith(domain) and name != domain:
+                        subdomains.add(name.lower())
+
+            capped = sorted(subdomains)[:20]
+            if capped:
+                output += f"[OK] Found {len(subdomains)} unique subdomains (showing top 20):\n"
+                for sub in capped:
+                    output += f"  - {sub}\n"
+            else:
+                output += f"[OK] No subdomains found in certificate transparency logs for {domain}.\n"
+        else:
+            output += f"[WARN] crt.sh returned status {resp.status_code}.\n"
+    except Exception as e:
+        output += f"[ERROR] Subdomain enumeration failed: {str(e)}\n"
+    output += "\n"
+
+    # --- 3. Linked email discovery ---
+    output += "=== EMAIL DISCOVERY ===\n"
+    if scan_mode == "quick":
+        output += "[SKIP] Email discovery skipped in Quick Scan mode.\n\n"
+    else:
+        _log_event(f"Discovering emails for {domain}...")
+        email_result = enhanced_email_discovery(domain, domains=[domain], scan_mode=scan_mode)
+        output += email_result + "\n"
+
+    # --- 4. Wayback Machine snapshot ---
+    output += "=== WAYBACK MACHINE ===\n"
+    try:
+        wayback = check_wayback_machine(f"https://{domain}")
+        output += wayback if wayback else f"[WARN] No Wayback Machine snapshot found for {domain}.\n"
+    except Exception as e:
+        output += f"[ERROR] Wayback check failed: {str(e)}\n"
+    output += "\n"
+
+    # --- 5. Google dorks ---
+    output += "=== WEB PRESENCE (Google Dorks) ===\n"
+    _log_event(f"Running web search dorks for {domain}...")
+
+    site_query = f"site:{domain}"
+    output += f"Site index dork: {site_query}\n"
+    output += google_search(site_query, scan_mode=scan_mode) + "\n"
+
+    email_dork = f'"@{domain}"'
+    output += f"Email exposure dork: {email_dork}\n"
+    output += google_search(email_dork, scan_mode=scan_mode) + "\n"
+
+    return output

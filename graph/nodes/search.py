@@ -4,7 +4,8 @@ import os
 
 from graph.nodes._timing import log_done, log_start
 from graph.state import OSINTState
-from tools.search_tools import google_search, social_media_search
+from tools.search_tools import domain_search, google_search, social_media_search
+from utils.validation import detect_target_type
 
 
 def google_node(state: OSINTState) -> dict:
@@ -13,8 +14,15 @@ def google_node(state: OSINTState) -> dict:
 
     config = state.get("config", {}) or {}
     scan_mode = config.get("scan_mode", "advanced")
+    target = state["target"]
 
-    result = google_search(state["target"], scan_mode=scan_mode)
+    # Domain targets get their own dedicated search path
+    if detect_target_type(target) == "domain":
+        result = domain_search(target, scan_mode=scan_mode)
+        log_done("Google search (domain)", start)
+        return {"google_data": [result]}
+
+    result = google_search(target, scan_mode=scan_mode)
 
     if scan_mode == "quick":
         google_method = "[SKIP] Free googlesearch library: Running Quick Scan (unauthenticated fallback)"
@@ -64,8 +72,23 @@ def social_node(state: OSINTState) -> dict:
 
     config = state.get("config", {}) or {}
     scan_mode = config.get("scan_mode", "advanced")
+    target = state["target"]
 
-    result = social_media_search(state["target"], scan_mode=scan_mode)
+    # Domain targets: social platform searches are not applicable;
+    # domain_search() in google_node already covers all domain intelligence.
+    if detect_target_type(target) == "domain":
+        result = (
+            f"Social Media Search: {target}\n"
+            + "=" * 60
+            + "\n"
+            + "[INFO] Target is a domain — social platform searches skipped.\n"
+            + "Domain WHOIS, subdomain enumeration, and email discovery are\n"
+            + "handled in the Domain Investigation section above.\n"
+        )
+        log_done("Social media search (domain — skipped)", start)
+        return {"social_data": [result]}
+
+    result = social_media_search(target, scan_mode=scan_mode)
 
     if scan_mode == "quick":
         meta = [

@@ -17,6 +17,10 @@ from utils.validation import is_valid_email, sanitize_target
 
 logger = logging.getLogger("osint_tool")
 
+# Free/personal email providers that carry no organisation-specific intelligence.
+# Used to skip Hunter.io/WhoisXML lookups for these domains.
+_FREE_DOMAINS: frozenset[str] = frozenset({"gmail.com", "yahoo.com", "hotmail.com", "outlook.com"})
+
 
 @cached(ttl=86400)  # Cache for 24 hours
 @retry(max_attempts=2, delay=1)
@@ -378,14 +382,14 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None, scan_m
     discovered_emails = []
 
     if not domains:
-        domains = ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]
+        domains = list(_FREE_DOMAINS)
 
     # Method 1: Hunter.io domain search
     if scan_mode == "quick":
         output += "\nHunter.io Domain Search: [SKIP] Hunter.io search skipped in Quick Scan mode.\n"
     else:
         for domain in domains:
-            if domain not in ["gmail.com", "yahoo.com", "hotmail.com"]:
+            if domain not in _FREE_DOMAINS:
                 hunter_result = search_hunter_emails(domain, target_name)
                 output += f"\nHunter.io - {domain}:\n{hunter_result}"
 
@@ -443,7 +447,7 @@ def enhanced_email_discovery(target_name: str, domains: List[str] = None, scan_m
     if whoisxml_key and domains:
         whois_output = ""
         for domain in domains:
-            if domain not in ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com"]:
+            if domain not in _FREE_DOMAINS:
                 whois_res = search_whoisxml(domain)
                 if whois_res:
                     whois_output += whois_res

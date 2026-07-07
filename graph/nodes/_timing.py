@@ -14,3 +14,13 @@ def log_done(label: str, start: datetime) -> None:
     """Print a completion message with elapsed time."""
     elapsed = (datetime.now() - start).total_seconds()
     print(f"[{datetime.now().strftime('%H:%M:%S')}] {label} complete ({elapsed:.1f}s)")
+
+
+def log_event(msg: str) -> None:
+    """Emit a progress message to the frontend log stream, if available."""
+    try:
+        from langchain_core.callbacks.manager import dispatch_custom_event
+
+        dispatch_custom_event("investigation_log", {"message": msg})
+    except Exception:
+        pass  # nosec B110

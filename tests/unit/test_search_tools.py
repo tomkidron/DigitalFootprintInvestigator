@@ -667,3 +667,123 @@ class TestSocialMediaSearch:
 
         for platform in ["linkedin", "twitter", "github", "reddit", "youtube", "instagram", "facebook", "soundcloud"]:
             assert platform in called_platforms
+
+
+# ---------------------------------------------------------------------------
+# domain_search
+# ---------------------------------------------------------------------------
+
+
+class TestDomainSearch:
+    """Tests for tools.search_tools.domain_search()"""
+
+    def _make_crt_response(self, entries):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = entries
+        return mock_resp
+
+    def test_returns_string(self):
+        from tools.search_tools import domain_search
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("tools.api_tools.search_whoisxml", return_value=""),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response([])),
+        ):
+            result = domain_search("example.com")
+        assert isinstance(result, str)
+
+    def test_contains_domain_header(self):
+        from tools.search_tools import domain_search
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("tools.api_tools.search_whoisxml", return_value=""),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response([])),
+        ):
+            result = domain_search("example.com")
+        assert "Domain Investigation: example.com" in result
+
+    def test_contains_whois_section(self):
+        from tools.search_tools import domain_search
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("tools.api_tools.search_whoisxml", return_value="  Domain: example.com\n"),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response([])),
+        ):
+            result = domain_search("example.com")
+        assert "=== WHOIS RECORD ===" in result
+        assert "Domain: example.com" in result
+
+    def test_subdomains_capped_at_20(self):
+        from tools.search_tools import domain_search
+
+        # Build 30 fake crt.sh entries
+        entries = [{"name_value": f"sub{i}.example.com"} for i in range(30)]
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("tools.api_tools.search_whoisxml", return_value=""),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response(entries)),
+        ):
+            result = domain_search("example.com")
+
+        # Count lines starting with "  - sub"
+        sub_lines = [ln for ln in result.splitlines() if ln.strip().startswith("- sub")]
+        assert len(sub_lines) <= 20
+
+    def test_quick_scan_skips_whois_and_email(self):
+        from tools.search_tools import domain_search
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response([])),
+        ):
+            result = domain_search("example.com", scan_mode="quick")
+
+        assert "[SKIP] WHOIS lookup skipped in Quick Scan mode." in result
+        assert "[SKIP] Email discovery skipped in Quick Scan mode." in result
+
+    def test_crt_sh_error_handled_gracefully(self):
+        from tools.search_tools import domain_search
+
+        err_resp = MagicMock()
+        err_resp.status_code = 503
+        err_resp.json.side_effect = Exception("bad json")
+
+        with (
+            patch("tools.search_tools.google_search", return_value=""),
+            patch("tools.api_tools.search_whoisxml", return_value=""),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=err_resp),
+        ):
+            result = domain_search("example.com")
+
+        # Should not raise; should contain a warning
+        assert "crt.sh returned status 503" in result
+
+    def test_contains_web_presence_section(self):
+        from tools.search_tools import domain_search
+
+        with (
+            patch("tools.search_tools.google_search", return_value="mocked search"),
+            patch("tools.api_tools.search_whoisxml", return_value=""),
+            patch("tools.api_tools.enhanced_email_discovery", return_value=""),
+            patch("tools.api_tools.check_wayback_machine", return_value=""),
+            patch("requests.get", return_value=self._make_crt_response([])),
+        ):
+            result = domain_search("example.com")
+
+        assert "=== WEB PRESENCE (Google Dorks) ===" in result
+        assert "site:example.com" in result

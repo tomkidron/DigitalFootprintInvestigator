@@ -6,6 +6,7 @@ import yaml
 from dotenv import load_dotenv
 
 from graph.workflow import create_workflow
+from utils.validation import detect_target_type
 
 # Load environment variables from .env
 load_dotenv()
@@ -62,6 +63,7 @@ def main():
     print("Digital Footprint Investigator (LangGraph)")
     print("=" * 60)
     print(f"\nTarget: {target}")
+    print(f"Target type: {detect_target_type(target).capitalize()}")
     print(f"Scan Mode: {config.get('scan_mode', 'advanced').capitalize()}")
 
     # Show enabled advanced features
