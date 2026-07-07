@@ -8,9 +8,10 @@ A multi-agent OSINT tool built with [LangGraph](https://langchain-ai.github.io/l
 
 - **Parallel LangGraph workflow**: Google search and social media search run simultaneously; results feed a single analysis → report pipeline
 - **Platform coverage**: Google (Tavily → SerpAPI → free fallback), GitHub, Reddit, Twitter/X (with dork fallback), YouTube, LinkedIn, Telegram, Instagram (dork fallback), Facebook (dork fallback), SoundCloud (dork fallback)
+- **Domain investigation**: Accept a bare domain (e.g. `example.com`) as a target — automatically runs WHOIS lookup, crt.sh subdomain enumeration (capped at 20), linked email discovery, Wayback Machine snapshot, and Google dorks
 - **API enrichment**: HIBP breach detection, Hunter.io email discovery, Gravatar profile pictures, Wayback Machine historical snapshots
 - **Resilient execution**: Automatic retry with exponential backoff, disk-based caching to avoid rate limits
-- **Input validation**: Sanitization and validation of all user inputs
+- **Input validation**: Accepts Name, Email, Username, Domain, or Phone Number — auto-detected and routed to the correct pipeline
 - **Next.js & FastAPI web UI**: decoupled modern architecture with a Next.js static React frontend and a FastAPI backend for granular, real-time SSE log streaming and report management
 - **CLI mode**: scriptable via `python main.py`
 - **Advanced analysis** (optional): timeline correlation, social connection analysis, deep content analysis
@@ -111,7 +112,7 @@ LOG_LEVEL=INFO                        # DEBUG, INFO, WARNING, ERROR
 DigitalFootprintInvestigator/
 ├── graph/
 │   ├── nodes/
-│   │   ├── _timing.py        # Shared log_start / log_done helpers
+│   │   ├── _timing.py        # Shared log_start / log_done / log_event helpers
 │   │   ├── search.py         # Google and social search nodes (run in parallel)
 │   │   ├── analysis.py       # Data correlation and pattern extraction
 │   │   ├── advanced.py       # Optional timeline / network / content analysis
@@ -131,7 +132,7 @@ DigitalFootprintInvestigator/
 ├── tests/
 │   ├── conftest.py           # Playwright session/page fixtures
 │   ├── healer.py             # Self-healing Playwright page wrapper
-│   ├── unit/                 # 215 unit tests (no browser or live API required)
+│   ├── unit/                 # 246 unit tests (no browser or live API required)
 │   └── ui/                   # 25 Playwright browser tests
 ├── api/
 │   └── main.py               # FastAPI backend entry point
@@ -220,6 +221,9 @@ python main.py "jane.smith@example.com"
 
 # Username
 python main.py "@janesmith"
+
+# Domain — triggers WHOIS, subdomain enumeration, email discovery, Wayback, and Google dorks
+python main.py "example.com"
 
 # With advanced analysis enabled
 python main.py "Jane Smith" --timeline --network --deep

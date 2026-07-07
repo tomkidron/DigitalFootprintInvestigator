@@ -52,19 +52,19 @@
 - **Use case**: Implemented the structure and professional appearance extracted from the OSINT course's client report template.
 - **Value for individuals**: HIGH - Generates agency-grade deliverables.
 
+### 11. Input Support: Domain Names
+- **Status**: Implemented
+- **Use case**: Accept a domain (e.g., `example.com`) as a primary target to immediately trigger WHOIS lookups, subdomain enumeration (crt.sh, capped at 20), and linked email discovery.
+- **Implementation**: Added `is_valid_domain()` and updated `detect_target_type()` in `utils/validation.py`; new `domain_search()` orchestrator in `tools/search_tools.py`; routing in `graph/nodes/search.py`; CLI banner and frontend placeholder updated.
+- **Value for individuals**: HIGH - Quickest win for expanding footprinting capabilities.
+
 ---
 
 ## New Investigation Starting Points (Inputs)
 
 These features focus on expanding the core input types the UI and CLI can accept to kick-off an investigation. They are prioritized below based on the balance of implementation complexity vs. added value.
 
-### 10. Input Support: Domain Names
-- **Use case**: Accept a domain (e.g., `example.com`) as a primary target to immediately trigger WHOIS lookups, subdomain enumeration, and linked email discovery.
-- **Implementation**: Update `utils/validation.py` to detect domains, update frontend/CLI input handling. We can leverage the already completed WhoisXML API.
-- **Effort**: Low (Enrichment backend logic already exists).
-- **Value for individuals**: HIGH - Quickest win for expanding our footprinting capabilities.
-
-### 11. Input Support: Phone Numbers
+### 12. Input Support: Phone Numbers
 - **Use case**: Accept international phone numbers (e.g., `+1234567890`) to search breach databases, caller ID services, and reverse lookup tools.
 - **Implementation**:
   - Add strict regex to `utils/validation.py`.
