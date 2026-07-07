@@ -75,7 +75,7 @@ def test_input_placeholder_text(page):
     target_input = page.locator("input[aria-label='Target Identifier']")
     expect(target_input).to_be_visible(timeout=8000)
     placeholder = target_input.get_attribute("placeholder")
-    assert placeholder == "Enter Name, Email, Username, or Phone Number..."
+    assert placeholder == "Enter Name, Email, Username, Domain, or Phone Number..."
 
 
 def test_sidebar_info_text(page):

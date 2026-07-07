@@ -32,9 +32,26 @@ def fastapi_app(worker_id):
         # In docker-compose, there's only one app-test instance running on 8000
         yield "http://app-test:8000"
     else:
-        # Build frontend first so static files exist
-        if not os.path.exists(os.path.join("frontend", "out")):
-            print("Building Next.js frontend for tests...")
+        # Build frontend if it doesn't exist or if source files are newer than the build
+        out_file = os.path.join("frontend", "out", "index.html")
+        src_dir = os.path.join("frontend", "src")
+        needs_build = True
+        
+        if os.path.exists(out_file) and os.path.exists(src_dir):
+            out_mtime = os.path.getmtime(out_file)
+            src_newer = False
+            for root, _, files in os.walk(src_dir):
+                for f in files:
+                    if os.path.getmtime(os.path.join(root, f)) > out_mtime:
+                        src_newer = True
+                        break
+                if src_newer:
+                    break
+            if not src_newer:
+                needs_build = False
+
+        if needs_build:
+            print("Frontend changes detected or missing build. Building Next.js frontend for tests...")
             # Note: requires npm to be in PATH
             try:
                 subprocess.run(["npm", "run", "build"], cwd="frontend", check=True, shell=True)
