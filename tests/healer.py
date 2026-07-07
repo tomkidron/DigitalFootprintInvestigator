@@ -36,9 +36,9 @@ class SelfHealingPage:
 
         # 2. Fallback: Data-Testid
         if "data-testid" not in selector:
-            testid_selector = f"[data-testid='{selector.strip('#').strip('.')}']"
+            testid = selector.strip('#').strip('.')
             try:
-                locator = self.page.locator(testid_selector).first
+                locator = self.page.get_by_test_id(testid).first
                 locator.wait_for(state="attached", timeout=2000)
                 return locator
             except Exception:
@@ -47,14 +47,17 @@ class SelfHealingPage:
         # 3. Fallback: Text content (if description provided)
         if description:
             try:
-                locator = self.page.locator(f"text='{description}'").first
+                locator = self.page.get_by_text(description).first
                 locator.wait_for(state="attached", timeout=2000)
                 return locator
             except Exception:
                 pass
 
-        # 4. AI Healing (Simulation for now, call LLM if configured)
-        return self._ai_heal(selector, description, cache_key)
+        # 4. AI Healing
+        if os.getenv("ENABLE_AI_HEALING", "false").lower() == "true":
+            return self._ai_heal(selector, description, cache_key)
+        else:
+            raise Exception(f"Failed to find element '{selector}'. AI Healing is disabled (set ENABLE_AI_HEALING=true to enable).")
 
     def _extract_dom_snapshot(self) -> List[dict]:
         """
@@ -147,6 +150,7 @@ class SelfHealingPage:
 
             if cache_key:
                 self.__class__._healed_cache[cache_key] = suggested_selector
+                self._persist_healed_selector(selector, description, suggested_selector)
 
             locator = self.page.locator(suggested_selector).first
             locator.wait_for(state="attached", timeout=5000)
@@ -162,3 +166,20 @@ class SelfHealingPage:
     def fill(self, selector: str, value: str, description: str = ""):
         element = self.find_element(selector, description)
         element.fill(value)
+
+    def _persist_healed_selector(self, original: str, description: str, suggested: str):
+        try:
+            import json
+            filepath = os.path.join("tests", "healed_selectors.json")
+            data = {}
+            if os.path.exists(filepath):
+                with open(filepath, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            
+            key = f"{original}::{description}"
+            data[key] = suggested
+            
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+        except Exception as e:
+            logger.warning(f"Failed to persist healed selector: {e}")

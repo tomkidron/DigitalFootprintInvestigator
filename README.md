@@ -163,6 +163,10 @@ python -m pytest tests/unit/ -v
 playwright install chromium   # first time only
 python -m pytest tests/ui/ -m "not integration" -v
 
+# UI tests with AI self-healing enabled (requires GEMINI_API_KEY)
+# Note: On Windows PowerShell use: $env:ENABLE_AI_HEALING="true"; python -m pytest ...
+ENABLE_AI_HEALING=true python -m pytest tests/ui/ -m "not integration" -v
+
 # Integration tests (require GEMINI_API_KEY and a full workflow run)
 python -m pytest tests/ui/ -m integration -v
 ```

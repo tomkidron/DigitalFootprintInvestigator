@@ -69,6 +69,7 @@ Thumbs.db
 .coverage
 htmlcov/
 tests/ui/*.png
+tests/healed_selectors.json
 
 # Claude Code local settings (machine-specific, not project config)
 .claude/settings.local.json

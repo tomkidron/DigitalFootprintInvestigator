@@ -58,6 +58,12 @@
 - **Implementation**: Added `is_valid_domain()` and updated `detect_target_type()` in `utils/validation.py`; new `domain_search()` orchestrator in `tools/search_tools.py`; routing in `graph/nodes/search.py`; CLI banner and frontend placeholder updated.
 - **Value for individuals**: HIGH - Quickest win for expanding footprinting capabilities.
 
+### 12. AI Test Healer Optimization
+- **Status**: Implemented
+- **Use case**: Optimize Playwright test resilience by utilizing native locators for fallbacks and making LLM-based healing opt-in (`ENABLE_AI_HEALING=true`) to save costs and avoid CI crashes.
+- **Implementation**: Refactored `tests/healer.py` to use `get_by_test_id` and `get_by_text`. Added logic to persist healed selectors to `tests/healed_selectors.json`.
+- **Value for individuals**: HIGH - Faster, cheaper, and more deterministic CI pipeline while maintaining local vibe-coding benefits.
+
 ---
 
 ## New Investigation Starting Points (Inputs)
