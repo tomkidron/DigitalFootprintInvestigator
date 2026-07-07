@@ -20,3 +20,5 @@ If a hook fails, fix the underlying issue before retrying. Do not work around ho
 
 ## Documentation Updates
 Always update the project documentation (`README.md`, `BACKLOG.md`, etc.) automatically after implementing major changes, new features, or significant refactors. Ensure the documentation stays strictly in sync with the live codebase.
+
+Documentation must be updated **before committing** and included in the **same commit** as the code changes. A separate documentation-only follow-up commit is not acceptable unless there is an explicit reason. Treat the documentation update as a required step in the commit checklist, not an afterthought.
