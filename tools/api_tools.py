@@ -100,6 +100,13 @@ def check_wayback_machine(url: str) -> str:
     return ""
 
 
+def get_archive_ph_link(url: str) -> str:
+    """Generate a direct lookup link for archive.ph."""
+    if not url:
+        return ""
+    return f"  Archive.ph Search: https://archive.ph/{quote(url)}\n"
+
+
 @cached(ttl=86400)
 @retry(max_attempts=2, delay=1)
 def search_whoisxml(domain: str) -> str:

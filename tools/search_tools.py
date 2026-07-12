@@ -571,11 +571,14 @@ def _search_github(target: str, scan_mode: str = "advanced") -> str:
         profile_url = data.get("html_url")
         output += f"  Profile: {profile_url}\n"
 
-        from tools.api_tools import check_wayback_machine
+        from tools.api_tools import check_wayback_machine, get_archive_ph_link
 
         wayback = check_wayback_machine(profile_url)
         if wayback:
             output += wayback
+            archive_ph = get_archive_ph_link(profile_url)
+            if archive_ph:
+                output += archive_ph
 
         return output
 
@@ -640,11 +643,14 @@ def _search_reddit(target: str) -> str:
         profile_url = f"https://reddit.com/user/{username}"
         output += f"  Profile: {profile_url}\n"
 
-        from tools.api_tools import check_wayback_machine
+        from tools.api_tools import check_wayback_machine, get_archive_ph_link
 
         wayback = check_wayback_machine(profile_url)
         if wayback:
             output += wayback
+            archive_ph = get_archive_ph_link(profile_url)
+            if archive_ph:
+                output += archive_ph
 
         return output
 
@@ -699,7 +705,7 @@ def domain_search(domain: str, scan_mode: str = "advanced") -> str:
     Returns:
         Formatted multi-section OSINT report string.
     """
-    from tools.api_tools import check_wayback_machine, enhanced_email_discovery, search_whoisxml
+    from tools.api_tools import check_wayback_machine, enhanced_email_discovery, get_archive_ph_link, search_whoisxml
 
     _log_event(f"Starting domain investigation for: '{domain}'...")
 
@@ -759,6 +765,8 @@ def domain_search(domain: str, scan_mode: str = "advanced") -> str:
     try:
         wayback = check_wayback_machine(f"https://{domain}")
         output += wayback if wayback else f"[WARN] No Wayback Machine snapshot found for {domain}.\n"
+        archive_ph = get_archive_ph_link(f"https://{domain}")
+        output += archive_ph if archive_ph else ""
     except Exception as e:
         output += f"[ERROR] Wayback check failed: {str(e)}\n"
     output += "\n"

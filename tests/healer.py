@@ -36,7 +36,7 @@ class SelfHealingPage:
 
         # 2. Fallback: Data-Testid
         if "data-testid" not in selector:
-            testid = selector.strip('#').strip('.')
+            testid = selector.strip("#").strip(".")
             try:
                 locator = self.page.get_by_test_id(testid).first
                 locator.wait_for(state="attached", timeout=2000)
@@ -57,7 +57,9 @@ class SelfHealingPage:
         if os.getenv("ENABLE_AI_HEALING", "false").lower() == "true":
             return self._ai_heal(selector, description, cache_key)
         else:
-            raise Exception(f"Failed to find element '{selector}'. AI Healing is disabled (set ENABLE_AI_HEALING=true to enable).")
+            raise Exception(
+                f"Failed to find element '{selector}'. AI Healing is disabled (set ENABLE_AI_HEALING=true to enable)."
+            )
 
     def _extract_dom_snapshot(self) -> List[dict]:
         """
@@ -170,15 +172,16 @@ class SelfHealingPage:
     def _persist_healed_selector(self, original: str, description: str, suggested: str):
         try:
             import json
+
             filepath = os.path.join("tests", "healed_selectors.json")
             data = {}
             if os.path.exists(filepath):
                 with open(filepath, "r", encoding="utf-8") as f:
                     data = json.load(f)
-            
+
             key = f"{original}::{description}"
             data[key] = suggested
-            
+
             with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=4)
         except Exception as e:

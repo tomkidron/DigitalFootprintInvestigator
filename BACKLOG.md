@@ -66,11 +66,14 @@
 
 ---
 
-## New Investigation Starting Points (Inputs)
+## High Priority (High Value, Lower Effort)
 
-These features focus on expanding the core input types the UI and CLI can accept to kick-off an investigation. They are prioritized below based on the balance of implementation complexity vs. added value.
+### [Input] Cryptocurrency Wallets
+- **Use case**: Accept BTC or ETH addresses to query free APIs (Blockchain.com, Chainabuse) for wallet balance, transaction volume, and scam reports.
+- **Effort**: Low/Medium
+- **Value for individuals**: HIGH - Essential for financial/crypto scam investigations.
 
-### 12. Input Support: Phone Numbers
+### [Input] Phone Numbers
 - **Use case**: Accept international phone numbers (e.g., `+1234567890`) to search breach databases, caller ID services, and reverse lookup tools.
 - **Implementation**:
   - Add strict regex to `utils/validation.py`.
@@ -80,19 +83,7 @@ These features focus on expanding the core input types the UI and CLI can accept
 - **Effort**: Medium (Requires strict validation rules and new API integrations).
 - **Value for individuals**: HIGH - Phone numbers are universal unique identifiers and crucial for OSINT.
 
-### 12. Input Support: Photo / Image Uploads
-- **Use case**: Allow users to upload an image to perform facial recognition or reverse image search (PimEyes/Google Lens) to find the target's name or social profiles.
-- **Implementation**: Requires UI changes to support multipart file uploads, backend handling of binary data, and routing to image search APIs.
-- **Effort**: High (Full stack changes required).
-- **Value for individuals**: VERY HIGH - The ultimate pivot tool, though technically the most complex to implement robustly.
-
----
-
-## High Priority (Global Focus & High ROI)
-
-
-
-### 5. Dehashed (Breach Data)
+### [Data Module] Dehashed (Breach Data)
 - **API**: dehashed.com/api
 - **Cost**: $5.49/month
 - **Use case**: Borderless breach data search yielding cleartext passwords and IP addresses globally.
@@ -100,31 +91,86 @@ These features focus on expanding the core input types the UI and CLI can accept
 - **Effort**: Low
 - **Value for individuals**: HIGH - Cleartext passwords frequently lead to discovering burner accounts via password reuse worldwide.
 
+### ~~[Data Module] Expanded Archival Searches (Beyond Wayback)~~ [COMPLETED]
+- ~~**Use case**: Integrate `archive.ph` (archive.today) alongside the Wayback Machine to find deleted posts that blocked the Internet Archive via `robots.txt`.~~
+- ~~**Effort**: Low~~
+- ~~**Value for individuals**: HIGH - Recovers otherwise lost data.~~
 
-## Technical Improvements
+### [Data Module] Unmasking Google Accounts (GHunt integration)
+- **Use case**: Automatically pull Google Maps reviews, calendar events, and YouTube channels from a `@gmail.com` input.
+- **Effort**: Medium
+- **Value for individuals**: VERY HIGH - Reveals real names and location data from just an email address.
 
-### 13. Scheduled Investigations
-- **Use case**: Monitor targets over time and detect footprint changes (e.g., account deletions).
-- **Implementation**: Add scheduler with a database for tracking state.
-- **Effort**: High
+### [Data Module] Have I Been Pwned (Free Tier Breach Check)
+- **Use case**: Default, free-tier breach check for emails and phone numbers to identify which breaches a target was involved in.
+- **Effort**: Low
+- **Value for individuals**: HIGH - Crucial for building a target profile before using paid services like Dehashed.
 
-### 14. Rate Limit Manager
+### [Tech Improvement] Rate Limit Manager
 - **Use case**: Track and manage API quotas actively rather than relying purely on exception handling.
 - **Implementation**: Add `utils/rate_limiter.py`
 - **Effort**: Medium
+- **Value for individuals**: HIGH - Prevents tool crashes and ensures investigation completeness.
 
-### 15. Async API Calls
-- **Use case**: Speed up parallel API calls within individual LangGraph nodes.
-- **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
-- **Effort**: High
+---
 
-### 16. Data Integrity & Source Credibility Scoring
-- **Use case**: Add confidence scoring to OSINT results to help users gauge the reliability of collected data (e.g., official `.gov` domain = High, anonymous pastebin = Low).
-- **Implementation**: Update `utils/models.py` to include `credibility_level`, modify `analysis.py` to cross-validate findings, and instruct the LLM in `report.py` to explicitly warn about low-confidence data in a new report section.
-- **Effort**: Medium
+## Medium Priority (High Value but High Effort, or Niche but Easy)
 
-### 19. EXIF Data & Geolocation Extraction
+### [Input] Photo / Image Uploads
+- **Use case**: Allow users to upload an image to perform facial recognition or reverse image search (PimEyes/Google Lens) to find the target's name or social profiles.
+- **Implementation**: Requires UI changes to support multipart file uploads, backend handling of binary data, and routing to image search APIs.
+- **Effort**: High (Full stack changes required).
+- **Value for individuals**: VERY HIGH - The ultimate pivot tool, though technically the most complex to implement robustly.
+
+### [Data Module] EXIF Data & Geolocation Extraction
 - **Use case**: When an image is analyzed (via the upcoming Photo Upload feature), automatically extract EXIF metadata (GPS coordinates, camera model, timestamps) to pinpoint physical locations.
 - **Implementation**: Integrate Python libraries like `Pillow` or `exifread` into an image processing node before passing the image to the reverse search APIs. Add automated Google Maps link generation for extracted coordinates.
 - **Effort**: Medium
 - **Value for individuals**: HIGH - Essential for physical location tracking.
+
+### [Data Module] Automated Google Dorking & Document Metadata
+- **Use case**: Automatically run Google Dorks for documents (PDF, DOCX) related to a target and extract EXIF/metadata (author name, creation software, OS).
+- **Effort**: Medium
+- **Value for individuals**: MEDIUM - Can reveal local computer usernames and exact creation dates, useful when social media footprint is small.
+
+### [Data Module] Deepfake & AI Image Detection
+- **Use case**: Run scraped profile pictures or uploaded photos through an AI-detection API to determine if the image is AI-generated (e.g., GAN faces for sock puppets).
+- **Effort**: Low/Medium
+- **Value for individuals**: MEDIUM - Helps identify fake accounts quickly.
+
+### [Tech Improvement] Scheduled Investigations
+- **Use case**: Monitor targets over time and detect footprint changes (e.g., account deletions).
+- **Implementation**: Add scheduler with a database for tracking state.
+- **Effort**: High
+- **Value for individuals**: HIGH - Great for continuous monitoring.
+
+### [Tech Improvement] Async API Calls
+- **Use case**: Speed up parallel API calls within individual LangGraph nodes.
+- **Implementation**: Refactor `tools/api_tools.py` to use `asyncio`
+- **Effort**: High
+- **Value for individuals**: MEDIUM - Faster execution, but tool already works without it.
+
+### [Tech Improvement] Data Integrity & Source Credibility Scoring
+- **Use case**: Add confidence scoring to OSINT results to help users gauge the reliability of collected data (e.g., official `.gov` domain = High, anonymous pastebin = Low).
+- **Implementation**: Update `utils/models.py` to include `credibility_level`, modify `analysis.py` to cross-validate findings, and instruct the LLM in `report.py` to explicitly warn about low-confidence data in a new report section.
+- **Effort**: Medium
+- **Value for individuals**: MEDIUM - Improves report quality but requires heavy prompt/logic tuning.
+
+---
+
+## Low Priority (Nice to Have / Niche)
+
+### [Data Module] Automated Evidence Capture (Full-Page Screenshots)
+- **Use case**: Use Playwright in headless mode to take automated, full-page screenshots of positive hits to preserve evidence.
+- **Effort**: Medium/High (Computationally heavy)
+- **Value for individuals**: LOW - Delays investigation times. Best kept as an optional future feature.
+
+### [Data Module] Surface-to-Darkweb Queries
+- **Use case**: Use surface-web gateways like `Ahmia.fi` to search for the target's email or username across indexed `.onion` sites without needing full Tor integration.
+- **Effort**: Medium
+- **Value for individuals**: LOW/MEDIUM - Niche, but useful for specific investigations.
+
+### [Data Module] YouTube Data / Thumbnail Viewer
+- **Use case**: Extract hidden metadata and high-res thumbnails from YouTube links, which can sometimes show deleted video content.
+- **Effort**: Low
+- **Value for individuals**: LOW - Niche to YouTube investigations.

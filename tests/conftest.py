@@ -36,7 +36,7 @@ def fastapi_app(worker_id):
         out_file = os.path.join("frontend", "out", "index.html")
         src_dir = os.path.join("frontend", "src")
         needs_build = True
-        
+
         if os.path.exists(out_file) and os.path.exists(src_dir):
             out_mtime = os.path.getmtime(out_file)
             src_newer = False
