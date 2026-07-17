@@ -296,6 +296,8 @@ workflow.add_edge("analysis", "my_node")
 
 **Docker Desktop won’t start (WSL error)** — the Ubuntu WSL distro may have auto-shut down. Run `wsl -d Ubuntu` in a terminal first, wait a few seconds, then retry Docker Desktop.
 
+**Warning regarding Telegram** — This tool uses Telethon with a user session to search Telegram. Telegram's automated systems may flag this as a "Userbot" and ban the associated phone number. It is highly recommended to use a burner or secondary phone number when authenticating the Telegram client.
+
 ## Privacy & Ethics
 
 **EDUCATIONAL AND LEGITIMATE PURPOSES ONLY**
@@ -312,6 +314,8 @@ All searches use publicly available information only. Users are responsible for 
 The consent checkbox in the UI is not a legal shield — you remain fully responsible for how you use this tool.
 
 **By using this tool, you agree to use it responsibly and ethically.**
+
+*Disclaimer: This tool automates interactions with various third-party APIs and websites. The authors are not responsible for any Terms of Service (ToS) violations caused by running this tool. Users are solely responsible for ensuring their usage complies with the policies of the platforms queried.*
 
 ## Performance & Reliability
 
